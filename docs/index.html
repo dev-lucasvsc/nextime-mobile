@@ -46,8 +46,8 @@
       <span>Serviços</span>
     </button>
     <button class="nx-tab-btn" data-tab="tab-resumo">
-      <i class="material-icons">bar_chart</i>
-      <span>Resumo</span>
+      <i class="material-icons">insights</i>
+      <span>Dashboard</span>
     </button>
   </nav>
 
@@ -112,34 +112,126 @@
     </div>
   </div>
 
-  <!-- TAB RESUMO -->
+  <!-- TAB RESUMO / DASHBOARD -->
   <div class="nx-tab" id="tab-resumo">
     <div class="nx-topbar">
-      <div class="nx-topbar-title">Resumo</div>
+      <div class="nx-topbar-title">Dashboard</div>
     </div>
     <div class="nx-scroll">
+
+      <!-- Navegação de mês -->
       <div class="date-nav" style="margin-top:8px;">
         <div class="date-nav-btn" id="btn-res-prev">‹</div>
         <div class="date-nav-label" id="res-mes-label">—</div>
         <div class="date-nav-btn" id="btn-res-next">›</div>
       </div>
-      <div class="hero-card" style="margin-top:12px;">
+
+      <!-- Hero: receita -->
+      <div class="hero-card" style="margin-top:10px;">
         <div class="hero-label">Receita do Mês</div>
         <div class="hero-value receita-valor" id="res-receita">R$ 0,00</div>
         <div class="hero-sub" id="res-concluidos">0 serviços concluídos</div>
+        <!-- Barra de progresso da meta -->
+        <div style="margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;">Taxa de conclusão</span>
+            <span style="font-size:12px;font-weight:700;color:var(--nx-accent);" id="res-taxa">0%</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;">
+            <div id="res-barra-conclusao" style="height:100%;background:var(--nx-accent);border-radius:99px;width:0%;transition:width 0.6s ease;"></div>
+          </div>
+        </div>
       </div>
+
+      <!-- Stats: agendamentos -->
+      <div class="section-title">Agendamentos</div>
       <div class="stats-row">
-        <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" style="color:var(--nx-yellow)" id="res-pendentes">0</div></div>
-        <div class="stat-card"><div class="stat-label">Confirmados</div><div class="stat-value" style="color:var(--nx-blue)" id="res-confirmados">0</div></div>
-        <div class="stat-card"><div class="stat-label">Concluídos</div><div class="stat-value" style="color:var(--nx-green)" id="res-concluidos-n">0</div></div>
-        <div class="stat-card"><div class="stat-label">Cancelados</div><div class="stat-value" style="color:var(--nx-red)" id="res-cancelados">0</div></div>
+        <div class="stat-card">
+          <div class="stat-label">Total</div>
+          <div class="stat-value" style="color:var(--nx-text)" id="res-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Concluídos</div>
+          <div class="stat-value" style="color:var(--nx-green)" id="res-concluidos-n">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendentes</div>
+          <div class="stat-value" style="color:var(--nx-yellow)" id="res-pendentes">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cancelados</div>
+          <div class="stat-value" style="color:var(--nx-red)" id="res-cancelados">0</div>
+        </div>
       </div>
-      <div class="section-title">Agendamentos do Mês</div>
+
+      <!-- Gráfico de barras: agendamentos por dia da semana -->
+      <div class="section-title">Agendamentos por dia da semana</div>
+      <div class="dash-card">
+        <div id="chart-semana" class="bar-chart"></div>
+      </div>
+
+      <!-- Balanço financeiro -->
+      <div class="section-title">Balanço Financeiro</div>
+      <div class="dash-card" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="balance-row">
+          <div class="balance-dot" style="background:var(--nx-green);"></div>
+          <span class="balance-label">Receita realizada</span>
+          <span class="balance-value" style="color:var(--nx-green);" id="bal-realizada">R$ 0,00</span>
+        </div>
+        <div class="balance-divider"></div>
+        <div class="balance-row">
+          <div class="balance-dot" style="background:var(--nx-blue);"></div>
+          <span class="balance-label">Receita potencial</span>
+          <span class="balance-value" style="color:var(--nx-blue);" id="bal-potencial">R$ 0,00</span>
+        </div>
+        <div class="balance-divider"></div>
+        <div class="balance-row">
+          <div class="balance-dot" style="background:var(--nx-red);"></div>
+          <span class="balance-label">Receita perdida</span>
+          <span class="balance-value" style="color:var(--nx-red);" id="bal-perdida">R$ 0,00</span>
+        </div>
+        <div class="balance-divider"></div>
+        <div class="balance-row">
+          <div class="balance-dot" style="background:var(--nx-yellow);"></div>
+          <span class="balance-label">Em aberto</span>
+          <span class="balance-value" style="color:var(--nx-yellow);" id="bal-aberto">R$ 0,00</span>
+        </div>
+        <!-- Mini barra financeira -->
+        <div id="bar-financeira" style="display:flex;height:8px;border-radius:99px;overflow:hidden;margin-top:4px;gap:2px;"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:10px;color:var(--nx-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--nx-green);display:inline-block;"></span>Concluído</span>
+          <span style="font-size:10px;color:var(--nx-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--nx-blue);display:inline-block;"></span>Confirmado</span>
+          <span style="font-size:10px;color:var(--nx-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--nx-yellow);display:inline-block;"></span>Pendente</span>
+          <span style="font-size:10px;color:var(--nx-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--nx-red);display:inline-block;"></span>Cancelado</span>
+        </div>
+      </div>
+
+      <!-- Serviços mais realizados -->
+      <div class="section-title">Serviços mais realizados</div>
+      <div class="dash-card" id="ranking-servicos">
+        <div class="empty-state" style="padding:20px 0;">
+          <div class="emoji" style="font-size:28px;">📋</div>
+          <p>Sem dados ainda.</p>
+        </div>
+      </div>
+
+      <!-- Clientes mais frequentes -->
+      <div class="section-title">Clientes mais frequentes</div>
+      <div class="dash-card" id="ranking-clientes">
+        <div class="empty-state" style="padding:20px 0;">
+          <div class="emoji" style="font-size:28px;">👤</div>
+          <p>Sem dados ainda.</p>
+        </div>
+      </div>
+
+      <!-- Lista de agendamentos do mês -->
+      <div class="section-title">Todos os agendamentos</div>
       <div id="lista-resumo-apts"></div>
       <div id="empty-resumo" class="empty-state" style="display:none;">
         <div class="emoji">📊</div>
         <p>Nenhum agendamento neste mês.</p>
       </div>
+
       <div style="height:80px;"></div>
     </div>
   </div>

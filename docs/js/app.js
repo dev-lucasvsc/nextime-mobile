@@ -580,21 +580,178 @@ function abrirEdicaoServico(id) {
   openSheet('servico');
 }
 
-// ─── RENDER: RESUMO ───
+// ─── RENDER: DASHBOARD ───
 function renderResumo() {
   document.getElementById('res-mes-label').textContent = fmt.mesAno(resMes, resAno);
 
-  const receita  = aptManager.receitaMes(resMes, resAno, serviceManager);
-  const contagem = aptManager.contagemPorStatus(resMes, resAno);
   const apts     = aptManager.listarPorMes(resMes, resAno);
+  const contagem = aptManager.contagemPorStatus(resMes, resAno);
+  const total    = apts.length;
+  const concluidos = contagem.concluido || 0;
 
-  document.getElementById('res-receita').textContent      = fmt.moeda(receita);
-  document.getElementById('res-concluidos').textContent   = `${contagem.concluido || 0} serviços concluídos`;
+  // ── Hero ──
+  const receitaRealizada = apts
+    .filter(a => a.status === 'concluido')
+    .reduce((acc, a) => { const s = serviceManager.buscarPorId(a.servicoId); return acc + (s ? s.preco : 0); }, 0);
+
+  document.getElementById('res-receita').textContent    = fmt.moeda(receitaRealizada);
+  document.getElementById('res-concluidos').textContent = `${concluidos} serviço${concluidos !== 1 ? 's' : ''} concluído${concluidos !== 1 ? 's' : ''}`;
+
+  const taxa = total > 0 ? Math.round((concluidos / total) * 100) : 0;
+  document.getElementById('res-taxa').textContent = taxa + '%';
+  document.getElementById('res-barra-conclusao').style.width = taxa + '%';
+
+  // ── Stats ──
+  document.getElementById('res-total').textContent       = total;
+  document.getElementById('res-concluidos-n').textContent = concluidos;
   document.getElementById('res-pendentes').textContent    = contagem.pendente   || 0;
-  document.getElementById('res-confirmados').textContent  = contagem.confirmado || 0;
-  document.getElementById('res-concluidos-n').textContent = contagem.concluido  || 0;
   document.getElementById('res-cancelados').textContent   = contagem.cancelado  || 0;
 
+  // ── Balanço financeiro ──
+  const receitaPotencial = apts
+    .filter(a => a.status !== 'cancelado')
+    .reduce((acc, a) => { const s = serviceManager.buscarPorId(a.servicoId); return acc + (s ? s.preco : 0); }, 0);
+  const receitaPerdida = apts
+    .filter(a => a.status === 'cancelado')
+    .reduce((acc, a) => { const s = serviceManager.buscarPorId(a.servicoId); return acc + (s ? s.preco : 0); }, 0);
+  const receitaAberto = apts
+    .filter(a => a.status === 'pendente' || a.status === 'confirmado')
+    .reduce((acc, a) => { const s = serviceManager.buscarPorId(a.servicoId); return acc + (s ? s.preco : 0); }, 0);
+
+  document.getElementById('bal-realizada').textContent = fmt.moeda(receitaRealizada);
+  document.getElementById('bal-potencial').textContent = fmt.moeda(receitaPotencial);
+  document.getElementById('bal-perdida').textContent   = fmt.moeda(receitaPerdida);
+  document.getElementById('bal-aberto').textContent    = fmt.moeda(receitaAberto);
+
+  // Barra financeira proporcional
+  const totalFin = receitaRealizada + receitaPerdida + receitaAberto;
+  const barFin = document.getElementById('bar-financeira');
+  barFin.innerHTML = '';
+  if (totalFin > 0) {
+    const segments = [
+      { val: receitaRealizada, color: 'var(--nx-green)' },
+      { val: receitaAberto,    color: 'var(--nx-yellow)' },
+      { val: receitaPerdida,   color: 'var(--nx-red)' },
+    ];
+    segments.forEach(seg => {
+      if (seg.val <= 0) return;
+      const pct = (seg.val / totalFin * 100).toFixed(1);
+      const el = document.createElement('div');
+      el.style.cssText = `flex:0 0 ${pct}%;height:100%;background:${seg.color};border-radius:99px;`;
+      barFin.appendChild(el);
+    });
+  }
+
+  // ── Gráfico: agendamentos por dia da semana ──
+  const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const porDia = [0,0,0,0,0,0,0];
+  apts.forEach(a => {
+    const d = new Date(a.data + 'T00:00:00');
+    porDia[d.getDay()]++;
+  });
+  const maxDia = Math.max(...porDia, 1);
+  const chartEl = document.getElementById('chart-semana');
+  chartEl.innerHTML = '';
+  porDia.forEach((qtd, i) => {
+    const pct = Math.max((qtd / maxDia) * 100, qtd > 0 ? 8 : 0);
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `
+      <div class="bar-val">${qtd > 0 ? qtd : ''}</div>
+      <div class="bar-fill-wrap">
+        <div class="bar-fill ${qtd > 0 ? 'has-data' : ''}" style="height:${pct}%;"></div>
+      </div>
+      <div class="bar-day">${DIAS_SEMANA[i]}</div>
+    `;
+    chartEl.appendChild(col);
+  });
+
+  // ── Ranking: serviços mais realizados ──
+  const rankSvcEl = document.getElementById('ranking-servicos');
+  const contagemSvc = {};
+  const receitaSvc  = {};
+  apts.filter(a => a.status === 'concluido').forEach(a => {
+    const s = serviceManager.buscarPorId(a.servicoId);
+    if (!s) return;
+    contagemSvc[s.id] = (contagemSvc[s.id] || 0) + 1;
+    receitaSvc[s.id]  = (receitaSvc[s.id]  || 0) + s.preco;
+  });
+  const rankSvc = Object.entries(contagemSvc)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  rankSvcEl.innerHTML = '';
+  if (rankSvc.length === 0) {
+    rankSvcEl.innerHTML = '<div class="empty-state" style="padding:16px 0;"><div class="emoji" style="font-size:28px;">✂️</div><p>Nenhum serviço concluído ainda.</p></div>';
+  } else {
+    const maxSvc = rankSvc[0][1];
+    rankSvc.forEach(([id, qtd], i) => {
+      const s = serviceManager.buscarPorId(id);
+      if (!s) return;
+      const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const pct = (qtd / maxSvc * 100).toFixed(0);
+      const item = document.createElement('div');
+      item.className = 'rank-item';
+      item.innerHTML = `
+        <div class="rank-pos ${posClass}">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</div>
+        <div class="rank-info">
+          <div class="rank-name">${s.nome}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;"></div></div>
+          <div class="rank-sub">${fmt.moeda(receitaSvc[id])} gerado</div>
+        </div>
+        <div class="rank-right">
+          <div class="rank-count">${qtd}</div>
+          <div class="rank-count-label">vezes</div>
+        </div>
+      `;
+      rankSvcEl.appendChild(item);
+    });
+  }
+
+  // ── Ranking: clientes mais frequentes ──
+  const rankCliEl = document.getElementById('ranking-clientes');
+  const contagemCli = {};
+  apts.forEach(a => {
+    contagemCli[a.clienteId] = (contagemCli[a.clienteId] || 0) + 1;
+  });
+  const rankCli = Object.entries(contagemCli)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  rankCliEl.innerHTML = '';
+  if (rankCli.length === 0) {
+    rankCliEl.innerHTML = '<div class="empty-state" style="padding:16px 0;"><div class="emoji" style="font-size:28px;">👤</div><p>Sem agendamentos no mês.</p></div>';
+  } else {
+    const maxCli = rankCli[0][1];
+    rankCli.forEach(([id, qtd], i) => {
+      const c = clientManager.buscarPorId(id);
+      if (!c) return;
+      const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const pct = (qtd / maxCli * 100).toFixed(0);
+      const iniciais = iniciaisNome(c.nome);
+      const fotoHtml = c.foto
+        ? `<div class="nx-avatar" style="width:36px;height:36px;font-size:12px;"><img src="${c.foto}" /></div>`
+        : `<div class="nx-avatar" style="width:36px;height:36px;font-size:12px;">${iniciais}</div>`;
+      const item = document.createElement('div');
+      item.className = 'rank-item';
+      item.innerHTML = `
+        <div class="rank-pos ${posClass}">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</div>
+        ${fotoHtml}
+        <div class="rank-info">
+          <div class="rank-name">${c.nome}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;"></div></div>
+          <div class="rank-sub">${c.telefone || c.email || 'Sem contato'}</div>
+        </div>
+        <div class="rank-right">
+          <div class="rank-count">${qtd}</div>
+          <div class="rank-count-label">agend.</div>
+        </div>
+      `;
+      rankCliEl.appendChild(item);
+    });
+  }
+
+  // ── Lista completa de agendamentos ──
   const listaEl = document.getElementById('lista-resumo-apts');
   const emptyEl = document.getElementById('empty-resumo');
   listaEl.innerHTML = '';
