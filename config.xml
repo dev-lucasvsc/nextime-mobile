@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="br.com.nextime.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Nextime</name>
+    <description>Aplicativo de agendamento de serviços com gestão de clientes.</description>
+    <author email="aluno@unieuro.edu.br" href="https://github.com/seuusuario">
+        Lucas e Parceiro — Unieuro 2025
+    </author>
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <plugin name="cordova-plugin-camera" spec="^7.0.0" />
+    <platform name="browser">
+        <allow-navigation href="*" />
+    </platform>
+</widget>
