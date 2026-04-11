@@ -284,6 +284,9 @@ function bindEventos() {
     } catch (e) { showToast(e.message); }
   });
 
+  // Exportação
+  bindExport();
+
   // Navegação de mês (Resumo)
   document.getElementById('btn-res-prev').addEventListener('click', () => {
     if (resMes === 0) { resMes = 11; resAno--; } else resMes--;
@@ -788,4 +791,338 @@ function renderResumo() {
       listaEl.appendChild(row);
     });
   });
+}
+
+// ═══════════════════════════════════════════
+// EXPORTAÇÃO: CSV
+// ═══════════════════════════════════════════
+function exportarCSV() {
+  const apts = aptManager.listarPorMes(resMes, resAno);
+  if (apts.length === 0) { showToast('Sem dados para exportar.'); return; }
+
+  const mesStr = fmt.mesAno(resMes, resAno).replace(' ', '_');
+
+  // ── Aba 1: Agendamentos ──
+  const linhasApts = [
+    ['Data', 'Hora', 'Cliente', 'Telefone', 'Serviço', 'Preço (R$)', 'Duração (min)', 'Status', 'Observação']
+  ];
+  apts.forEach(a => {
+    const c = clientManager.buscarPorId(a.clienteId);
+    const s = serviceManager.buscarPorId(a.servicoId);
+    linhasApts.push([
+      a.data,
+      a.hora,
+      c ? c.nome : '—',
+      c ? (c.telefone || '') : '',
+      s ? s.nome : '—',
+      s ? s.preco.toFixed(2).replace('.', ',') : '0,00',
+      s ? s.duracao : '',
+      a.status,
+      a.observacao || ''
+    ]);
+  });
+
+  // ── Aba 2: Resumo financeiro ──
+  const concluidos  = apts.filter(a => a.status === 'concluido');
+  const cancelados  = apts.filter(a => a.status === 'cancelado');
+  const emAberto    = apts.filter(a => a.status === 'pendente' || a.status === 'confirmado');
+
+  const somaPreco = lista => lista.reduce((acc, a) => {
+    const s = serviceManager.buscarPorId(a.servicoId);
+    return acc + (s ? s.preco : 0);
+  }, 0);
+
+  const receitaRealizada = somaPreco(concluidos);
+  const receitaPerdida   = somaPreco(cancelados);
+  const receitaAberto    = somaPreco(emAberto);
+  const taxa = apts.length > 0 ? ((concluidos.length / apts.length) * 100).toFixed(1) : '0.0';
+
+  const linhasResumo = [
+    ['Indicador', 'Valor'],
+    ['Mês de referência', fmt.mesAno(resMes, resAno)],
+    ['Total de agendamentos', apts.length],
+    ['Concluídos', concluidos.length],
+    ['Pendentes', apts.filter(a => a.status === 'pendente').length],
+    ['Confirmados', apts.filter(a => a.status === 'confirmado').length],
+    ['Cancelados', cancelados.length],
+    ['Taxa de conclusão (%)', taxa],
+    ['Receita realizada (R$)', receitaRealizada.toFixed(2).replace('.', ',')],
+    ['Receita em aberto (R$)', receitaAberto.toFixed(2).replace('.', ',')],
+    ['Receita perdida (R$)', receitaPerdida.toFixed(2).replace('.', ',')],
+  ];
+
+  // ── Aba 3: Ranking serviços ──
+  const contagemSvc = {};
+  const receitaSvc  = {};
+  concluidos.forEach(a => {
+    const s = serviceManager.buscarPorId(a.servicoId);
+    if (!s) return;
+    contagemSvc[s.id] = (contagemSvc[s.id] || 0) + 1;
+    receitaSvc[s.id]  = (receitaSvc[s.id]  || 0) + s.preco;
+  });
+  const linhasRankSvc = [['Posição', 'Serviço', 'Qtd Realizados', 'Receita (R$)']];
+  Object.entries(contagemSvc)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([id, qtd], i) => {
+      const s = serviceManager.buscarPorId(id);
+      if (!s) return;
+      linhasRankSvc.push([i + 1, s.nome, qtd, receitaSvc[id].toFixed(2).replace('.', ',')]);
+    });
+
+  // ── Aba 4: Ranking clientes ──
+  const contagemCli = {};
+  apts.forEach(a => { contagemCli[a.clienteId] = (contagemCli[a.clienteId] || 0) + 1; });
+  const linhasRankCli = [['Posição', 'Cliente', 'Telefone', 'Qtd Agendamentos']];
+  Object.entries(contagemCli)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([id, qtd], i) => {
+      const c = clientManager.buscarPorId(id);
+      if (!c) return;
+      linhasRankCli.push([i + 1, c.nome, c.telefone || '', qtd]);
+    });
+
+  // Montar CSV multi-seção (único arquivo)
+  const csvLinhas = (linhas) => linhas.map(row =>
+    row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')
+  ).join('\r\n');
+
+  const csv = [
+    '=== RESUMO FINANCEIRO ===',
+    csvLinhas(linhasResumo),
+    '',
+    '=== AGENDAMENTOS DO MÊS ===',
+    csvLinhas(linhasApts),
+    '',
+    '=== RANKING DE SERVIÇOS ===',
+    csvLinhas(linhasRankSvc),
+    '',
+    '=== RANKING DE CLIENTES ===',
+    csvLinhas(linhasRankCli),
+  ].join('\r\n');
+
+  const bom = '\uFEFF'; // BOM para Excel reconhecer UTF-8
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `Nextime_${mesStr}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exportado!');
+}
+
+// ═══════════════════════════════════════════
+// EXPORTAÇÃO: PDF
+// ═══════════════════════════════════════════
+function exportarPDF() {
+  if (typeof window.jspdf === 'undefined') {
+    showToast('Aguarde o carregamento do PDF...');
+    return;
+  }
+
+  const apts = aptManager.listarPorMes(resMes, resAno);
+  if (apts.length === 0) { showToast('Sem dados para exportar.'); return; }
+
+  showToast('Gerando PDF...');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const VERDE   = [0, 180, 140];
+  const ESCURO  = [15, 20, 25];
+  const CINZA   = [100, 120, 140];
+  const BRANCO  = [255, 255, 255];
+  const mesStr  = fmt.mesAno(resMes, resAno);
+  const W       = doc.internal.pageSize.getWidth();
+
+  // ── Cabeçalho ──
+  doc.setFillColor(...ESCURO);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(...VERDE);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text('nextime', 14, 12);
+  doc.setTextColor(...BRANCO);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Dashboard — ' + mesStr, 14, 20);
+  doc.setTextColor(...CINZA);
+  doc.setFontSize(8);
+  doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR'), W - 14, 20, { align: 'right' });
+
+  let y = 36;
+
+  // ── Calcular dados ──
+  const concluidos = apts.filter(a => a.status === 'concluido');
+  const cancelados = apts.filter(a => a.status === 'cancelado');
+  const pendentes  = apts.filter(a => a.status === 'pendente');
+  const confirmados= apts.filter(a => a.status === 'confirmado');
+
+  const somaPreco = lista => lista.reduce((acc, a) => {
+    const s = serviceManager.buscarPorId(a.servicoId);
+    return acc + (s ? s.preco : 0);
+  }, 0);
+
+  const receitaRealizada = somaPreco(concluidos);
+  const receitaPerdida   = somaPreco(cancelados);
+  const receitaAberto    = somaPreco(pendentes) + somaPreco(confirmados);
+  const taxa = apts.length > 0 ? ((concluidos.length / apts.length) * 100).toFixed(1) : '0.0';
+
+  // ── Seção: KPIs ──
+  const kpis = [
+    { label: 'Receita Realizada', valor: fmt.moeda(receitaRealizada), cor: VERDE },
+    { label: 'Em Aberto',         valor: fmt.moeda(receitaAberto),    cor: [59, 130, 246] },
+    { label: 'Receita Perdida',   valor: fmt.moeda(receitaPerdida),   cor: [255, 77, 109] },
+    { label: 'Taxa de Conclusão', valor: taxa + '%',                  cor: VERDE },
+  ];
+
+  const kpiW = (W - 28 - 9) / 4;
+  kpis.forEach((k, i) => {
+    const x = 14 + i * (kpiW + 3);
+    doc.setFillColor(23, 30, 39);
+    doc.roundedRect(x, y, kpiW, 22, 2, 2, 'F');
+    doc.setTextColor(...k.cor);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    // quebrar texto longo
+    const valLines = doc.splitTextToSize(k.valor, kpiW - 4);
+    doc.text(valLines[0], x + kpiW / 2, y + 10, { align: 'center' });
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text(k.label, x + kpiW / 2, y + 17, { align: 'center' });
+  });
+  y += 30;
+
+  // ── Seção: Agendamentos ──
+  doc.setTextColor(...CINZA);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('AGENDAMENTOS DO MÊS', 14, y);
+  y += 4;
+
+  doc.autoTable({
+    startY: y,
+    head: [['Data', 'Hora', 'Cliente', 'Serviço', 'Preço', 'Status']],
+    body: apts.map(a => {
+      const c = clientManager.buscarPorId(a.clienteId);
+      const s = serviceManager.buscarPorId(a.servicoId);
+      const statusLabel = { pendente: 'Pendente', confirmado: 'Confirmado', concluido: 'Concluído', cancelado: 'Cancelado' };
+      return [
+        a.data.split('-').reverse().join('/'),
+        a.hora,
+        c ? c.nome : '—',
+        s ? s.nome : '—',
+        s ? fmt.moeda(s.preco) : '—',
+        statusLabel[a.status] || a.status,
+      ];
+    }),
+    styles: {
+      fontSize: 8,
+      cellPadding: 2.5,
+      textColor: [200, 210, 220],
+      fillColor: [15, 20, 25],
+      lineColor: [37, 48, 64],
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: [23, 30, 39],
+      textColor: VERDE,
+      fontStyle: 'bold',
+      fontSize: 8,
+    },
+    alternateRowStyles: { fillColor: [20, 27, 36] },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 14 },
+      4: { cellWidth: 24 },
+      5: { cellWidth: 22 },
+    },
+    margin: { left: 14, right: 14 },
+    didDrawPage: (data) => {
+      // Rodapé em cada página
+      const pageH = doc.internal.pageSize.getHeight();
+      doc.setFillColor(...ESCURO);
+      doc.rect(0, pageH - 10, W, 10, 'F');
+      doc.setTextColor(...CINZA);
+      doc.setFontSize(7);
+      doc.text(`Nextime · ${mesStr} · Página ${data.pageNumber}`, W / 2, pageH - 3, { align: 'center' });
+    },
+  });
+
+  y = doc.lastAutoTable.finalY + 10;
+
+  // ── Seção: Ranking Serviços ──
+  const contagemSvc = {};
+  const receitaSvc  = {};
+  concluidos.forEach(a => {
+    const s = serviceManager.buscarPorId(a.servicoId);
+    if (!s) return;
+    contagemSvc[s.id] = (contagemSvc[s.id] || 0) + 1;
+    receitaSvc[s.id]  = (receitaSvc[s.id]  || 0) + s.preco;
+  });
+  const rankSvc = Object.entries(contagemSvc).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  if (rankSvc.length > 0) {
+    if (y > 220) { doc.addPage(); y = 20; }
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('SERVIÇOS MAIS REALIZADOS', 14, y);
+    y += 4;
+
+    doc.autoTable({
+      startY: y,
+      head: [['#', 'Serviço', 'Qtd Realizados', 'Receita Gerada']],
+      body: rankSvc.map(([id, qtd], i) => {
+        const s = serviceManager.buscarPorId(id);
+        return [i + 1, s ? s.nome : '—', qtd, fmt.moeda(receitaSvc[id] || 0)];
+      }),
+      styles: { fontSize: 8, cellPadding: 2.5, textColor: [200, 210, 220], fillColor: [15, 20, 25], lineColor: [37, 48, 64], lineWidth: 0.2 },
+      headStyles: { fillColor: [23, 30, 39], textColor: VERDE, fontStyle: 'bold', fontSize: 8 },
+      alternateRowStyles: { fillColor: [20, 27, 36] },
+      columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 30 }, 3: { cellWidth: 36 } },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  // ── Seção: Ranking Clientes ──
+  const contagemCli = {};
+  apts.forEach(a => { contagemCli[a.clienteId] = (contagemCli[a.clienteId] || 0) + 1; });
+  const rankCli = Object.entries(contagemCli).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  if (rankCli.length > 0) {
+    if (y > 220) { doc.addPage(); y = 20; }
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('CLIENTES MAIS FREQUENTES', 14, y);
+    y += 4;
+
+    doc.autoTable({
+      startY: y,
+      head: [['#', 'Cliente', 'Telefone', 'Agendamentos']],
+      body: rankCli.map(([id, qtd], i) => {
+        const c = clientManager.buscarPorId(id);
+        return [i + 1, c ? c.nome : '—', c ? (c.telefone || '—') : '—', qtd];
+      }),
+      styles: { fontSize: 8, cellPadding: 2.5, textColor: [200, 210, 220], fillColor: [15, 20, 25], lineColor: [37, 48, 64], lineWidth: 0.2 },
+      headStyles: { fillColor: [23, 30, 39], textColor: VERDE, fontStyle: 'bold', fontSize: 8 },
+      alternateRowStyles: { fillColor: [20, 27, 36] },
+      columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 36 }, 3: { cellWidth: 30 } },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  // Salvar
+  const mesArq = fmt.mesAno(resMes, resAno).replace(' ', '_');
+  doc.save(`Nextime_${mesArq}.pdf`);
+  showToast('PDF exportado!');
+}
+
+// ── Bind dos botões de exportação (chamado dentro de bindEventos) ──
+function bindExport() {
+  document.getElementById('btn-export-csv').addEventListener('click', exportarCSV);
+  document.getElementById('btn-export-pdf').addEventListener('click', exportarPDF);
 }
