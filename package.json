@@ -1,0 +1,30 @@
+{
+  "name": "nextime",
+  "displayName": "Nextime",
+  "version": "1.0.0",
+  "description": "Aplicativo de agendamento de serviços com gestão de clientes.",
+  "scripts": {
+    "start": "cordova run browser"
+  },
+  "keywords": [
+    "cordova",
+    "mobile",
+    "agendamento",
+    "unieuro"
+  ],
+  "author": "Lucas e Parceiro — Unieuro 2025",
+  "license": "MIT",
+  "devDependencies": {
+    "cordova": "^12.0.0",
+    "cordova-browser": "^7.0.0",
+    "cordova-plugin-camera": "^7.0.0"
+  },
+  "cordova": {
+    "plugins": {
+      "cordova-plugin-camera": {}
+    },
+    "platforms": [
+      "browser"
+    ]
+  }
+}
