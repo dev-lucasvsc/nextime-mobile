@@ -10,7 +10,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════ LOGIN ══ -->
+<!--  LOGIN  -->
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">next<span>ime</span></div>
@@ -48,10 +48,10 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════ APP ══ -->
+<!--  APP  -->
 <div id="app" style="display:none;">
 
-  <!-- ── TABS PRESTADOR ── -->
+  <!-- TABS PRESTADOR ── -->
   <div id="tabs-prestador" style="display:none;">
     <nav class="nx-tabbar" id="tabbar-prestador">
       <button class="nx-tab-btn active" data-tab="tab-agenda">
@@ -76,7 +76,6 @@
     <div class="nx-tab active" id="tab-agenda">
       <div class="nx-topbar">
         <div class="nx-topbar-title" id="topbar-title-p">nextime</div>
-        <button class="nx-icon-btn" id="btn-logout-p"><i class="material-icons">logout</i></button>
       </div>
       <div class="nx-scroll">
         <div class="date-nav">
@@ -161,9 +160,63 @@
         <div style="height:80px;"></div>
       </div>
     </div>
-  </div>
+    <!-- Tab: Perfil (Prestador) -->
+    <div class="nx-tab" id="tab-perfil-p">
+      <div class="nx-topbar">
+        <div class="nx-topbar-title">Meu Perfil</div>
+        <button class="nx-icon-btn" id="btn-editar-perfil-p" title="Editar perfil">
+          <i class="material-icons">edit</i>
+        </button>
+      </div>
+      <div class="nx-scroll">
+        <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 16px;">
+          <div class="foto-perfil-grande" id="perfil-foto-preview-p">
+            <span id="perfil-foto-placeholder-p">👤</span>
+            <img id="perfil-foto-img-p" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+          </div>
+          <div style="margin-top:12px;font-size:20px;font-weight:700;" id="perfil-nome-p">—</div>
+          <div style="font-size:13px;color:var(--nx-muted);margin-top:2px;" id="perfil-tipo-p">Prestador</div>
+        </div>
 
-  <!-- ── TABS CLIENTE ── -->
+        <div class="nx-list" style="margin:0 0 12px;">
+          <div class="nx-list-item">
+            <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">email</i>
+            <span id="perfil-email-p">—</span>
+          </div>
+          <div class="nx-list-item">
+            <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">badge</i>
+            <span id="perfil-doc-p">—</span>
+          </div>
+          <div class="nx-list-item" id="perfil-negocio-wrap-p" style="display:none;">
+            <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">store</i>
+            <span id="perfil-negocio-p">—</span>
+          </div>
+        </div>
+
+        <!-- Trocar senha -->
+        <div style="margin:0 0 12px;">
+          <div class="section-title">Segurança</div>
+          <div class="nx-list">
+            <div class="nx-list-item" id="btn-trocar-senha-p" style="cursor:pointer;">
+              <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">lock</i>
+              <span>Trocar senha</span>
+              <i class="material-icons" style="margin-left:auto;color:var(--nx-muted);font-size:18px;">chevron_right</i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout -->
+        <div style="padding:0 0 32px;">
+          <button class="nx-btn" id="btn-logout-p"
+            style="background:transparent;border:1.5px solid var(--nx-red);color:var(--nx-red);">
+            <i class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:18px;">logout</i>
+            Sair da conta
+          </button>
+        </div>
+        <div style="height:80px;"></div>
+      </div>
+    </div>
+  </div><!-- /tabs-prestador -->
   <div id="tabs-cliente" style="display:none;">
     <nav class="nx-tabbar" id="tabbar-cliente">
       <button class="nx-tab-btn active" data-tab="tab-explorar">
@@ -185,7 +238,6 @@
     <div class="nx-tab active" id="tab-explorar">
       <div class="nx-topbar">
         <div class="nx-topbar-title">nextime</div>
-        <button class="nx-icon-btn" id="btn-logout-c"><i class="material-icons">logout</i></button>
       </div>
       <div class="nx-scroll">
         <div class="nx-search">
@@ -228,11 +280,63 @@
         <div style="height:80px;"></div>
       </div>
     </div>
-  </div>
+    <!-- Tab: Perfil (Cliente) -->
+    <div class="nx-tab" id="tab-perfil-c">
+      <div class="nx-topbar">
+        <div class="nx-topbar-title">Meu Perfil</div>
+        <button class="nx-icon-btn" id="btn-editar-perfil-c" title="Editar perfil">
+          <i class="material-icons">edit</i>
+        </button>
+      </div>
+      <div class="nx-scroll">
+        <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 16px;">
+          <div class="foto-perfil-grande" id="perfil-foto-preview-c">
+            <span id="perfil-foto-placeholder-c">👤</span>
+            <img id="perfil-foto-img-c" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+          </div>
+          <div style="margin-top:12px;font-size:20px;font-weight:700;" id="perfil-nome-c">—</div>
+          <div style="font-size:13px;color:var(--nx-muted);margin-top:2px;">Cliente</div>
+        </div>
 
-</div><!-- /#app -->
+        <div class="nx-list" style="margin:0 0 12px;">
+          <div class="nx-list-item">
+            <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">email</i>
+            <span id="perfil-email-c">—</span>
+          </div>
+          <div class="nx-list-item">
+            <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">badge</i>
+            <span id="perfil-doc-c">—</span>
+          </div>
+        </div>
 
-<!-- ══════════════════════════════════ CHAT SCREEN ══ -->
+        <!-- Trocar senha -->
+        <div style="margin:0 0 12px;">
+          <div class="section-title">Segurança</div>
+          <div class="nx-list">
+            <div class="nx-list-item" id="btn-trocar-senha-c" style="cursor:pointer;">
+              <i class="material-icons" style="color:var(--nx-accent);margin-right:12px;">lock</i>
+              <span>Trocar senha</span>
+              <i class="material-icons" style="margin-left:auto;color:var(--nx-muted);font-size:18px;">chevron_right</i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout -->
+        <div style="padding:0 0 32px;">
+          <button class="nx-btn" id="btn-logout-c"
+            style="background:transparent;border:1.5px solid var(--nx-red);color:var(--nx-red);">
+            <i class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:18px;">logout</i>
+            Sair da conta
+          </button>
+        </div>
+        <div style="height:80px;"></div>
+      </div>
+    </div>
+  </div><!-- /tabs-cliente -->
+
+</div><!-- app -->
+
+<!--  CHAT SCREEN  -->
 <div id="chat-screen">
   <div class="chat-topbar">
     <button class="chat-topbar-back" id="btn-chat-back">
@@ -251,7 +355,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SHEETS ══ -->
+<!--  SHEETS  -->
 
 <!-- Sheet: Serviço (Prestador) -->
 <div class="nx-overlay" id="overlay-servico"></div>
@@ -264,7 +368,7 @@
     <input type="hidden" id="svc-edit-id"/>
     <input id="svc-nome"    class="nx-input" type="text"   placeholder="Nome do serviço *"/>
     <input id="svc-preco"   class="nx-input" type="number" placeholder="Preço (R$) *" min="0" step="0.01"/>
-    <input id="svc-duracao" class="nx-input" type="number" placeholder="Duração (minutos) *" min="5" step="5"/>
+    <input id="svc-duracao" class="nx-input" type="number" placeholder="Duração (horas) *" min="5" step="5"/>
     <input id="svc-desc"    class="nx-input" type="text"   placeholder="Descrição (opcional)"/>
     <button class="nx-btn" id="btn-salvar-servico">Salvar</button>
   </div>
@@ -294,34 +398,42 @@
   </div>
 </div>
 
-<!-- Sheet: Perfil do usuário -->
+<!-- Sheet: Editar Perfil (foto) -->
 <div class="nx-overlay" id="overlay-perfil"></div>
 <div class="nx-sheet" id="sheet-perfil">
   <div class="nx-sheet-header">
-    <span>Meu Perfil</span>
+    <span>Editar Foto</span>
     <button class="nx-sheet-close" data-sheet="perfil">✕</button>
   </div>
   <div class="nx-sheet-body">
-    <!-- Foto de perfil -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;">
       <div class="foto-perfil-grande" id="perfil-foto-preview">
         <span id="perfil-foto-placeholder">👤</span>
         <img id="perfil-foto-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
       </div>
       <div style="display:flex;gap:8px;">
-        <div class="foto-btn" id="perfil-btn-camera"> Câmera</div>
-        <div class="foto-btn" id="perfil-btn-galeria"> Galeria</div>
+        <div class="foto-btn" id="perfil-btn-camera">📷 Câmera</div>
+        <div class="foto-btn" id="perfil-btn-galeria">🖼️ Galeria</div>
       </div>
       <input type="file" id="perfil-foto-input" accept="image/*" style="display:none;"/>
     </div>
-    <!-- Dados do usuário -->
-    <div style="background:var(--nx-surface3);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
-      <div style="font-weight:700;font-size:16px;" id="perfil-nome-display">—</div>
-      <div style="font-size:13px;color:var(--nx-muted);" id="perfil-email-display">—</div>
-      <div style="font-size:13px;color:var(--nx-muted);" id="perfil-doc-display">—</div>
-      <div style="font-size:13px;color:var(--nx-accent);display:none;" id="perfil-negocio-display">—</div>
-    </div>
     <button class="nx-btn" id="btn-salvar-foto-perfil">Salvar Foto</button>
+  </div>
+</div>
+
+<!-- Sheet: Trocar Senha -->
+<div class="nx-overlay" id="overlay-senha"></div>
+<div class="nx-sheet" id="sheet-senha">
+  <div class="nx-sheet-header">
+    <span>Trocar Senha</span>
+    <button class="nx-sheet-close" data-sheet="senha">✕</button>
+  </div>
+  <div class="nx-sheet-body">
+    <div id="senha-error" class="login-error" style="margin-bottom:8px;"></div>
+    <input id="senha-atual"  class="nx-input" type="password" placeholder="Senha atual"/>
+    <input id="senha-nova"   class="nx-input" type="password" placeholder="Nova senha"/>
+    <input id="senha-confirma" class="nx-input" type="password" placeholder="Confirmar nova senha"/>
+    <button class="nx-btn" id="btn-salvar-senha">Salvar Senha</button>
   </div>
 </div>
 

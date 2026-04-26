@@ -1,11 +1,3 @@
-/**
- * app.js — Nextime v2
- * Disciplina: Desenvolvimento Mobile — Unieuro 2025
- */
-
-// ══════════════════════════════════════════════
-// ESTADO GLOBAL
-// ══════════════════════════════════════════════
 const authManager = new AuthManager();
 const aptManager  = new AppointmentManager();
 const chatManager = new ChatManager();
@@ -22,9 +14,9 @@ let currentUser    = null;
 let currentChatApt = null; // agendamento aberto no chat
 let fotoTemp       = null; // base64 temporário da foto capturada
 
-// ══════════════════════════════════════════════
+
 // HELPERS
-// ══════════════════════════════════════════════
+
 const fmt = {
   moeda: v => `R$ ${parseFloat(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
   mesAno: (m, a) => {
@@ -58,9 +50,9 @@ function statusBadge(status) {
   return `<span class="status-badge status-${status}">${s.icon} ${s.label}</span>`;
 }
 
-// ══════════════════════════════════════════════
+
 // SISTEMA DE SHEETS
-// ══════════════════════════════════════════════
+
 function openSheet(name) {
   document.getElementById('overlay-'+name).classList.add('open');
   document.getElementById('sheet-'+name).classList.add('open');
@@ -70,19 +62,18 @@ function closeSheet(name) {
   document.getElementById('sheet-'+name).classList.remove('open');
 }
 
-// ══════════════════════════════════════════════
+
 // SISTEMA DE TABS
-// ══════════════════════════════════════════════
+
 function initTabs(barId) {
   const bar = document.getElementById(barId);
-  bar.querySelectorAll('.nx-tab-btn').forEach(btn => {
+  bar.querySelectorAll('.nx-tab-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       bar.querySelectorAll('.nx-tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const tabId = btn.dataset.tab;
       document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      // re-render ao trocar tab
+      if (tabId) document.getElementById(tabId).classList.add('active');
       if (tabId === 'tab-chats-p')   renderChatsPrestador();
       if (tabId === 'tab-chats-c')   renderChatsCliente();
       if (tabId === 'tab-meus-apts') renderMeusAgendamentos();
@@ -92,9 +83,18 @@ function initTabs(barId) {
   });
 }
 
-// ══════════════════════════════════════════════
+function irParaTab(barId, tabId) {
+  const bar = document.getElementById(barId);
+  bar.querySelectorAll('.nx-tab-btn').forEach(b => b.classList.remove('active'));
+  const btnPerfil = document.getElementById(barId === 'tabbar-prestador' ? 'btn-perfil-p' : 'btn-perfil-c');
+  if (btnPerfil) btnPerfil.classList.add('active');
+  document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+
 // AUTH
-// ══════════════════════════════════════════════
+
 let modoAuth     = 'login';
 let perfilSelecionado = 'cliente';
 
@@ -131,7 +131,7 @@ function setupAuth() {
   Mask.apply(document.getElementById('auth-cpf'),  'cpf');
   Mask.apply(document.getElementById('auth-cnpj'), 'cnpj');
 
-  // ── Câmera / Galeria no cadastro (elementos opcionais) ──
+  // ── Câmera / Galeria no cadastro
   const _aBtnCam    = document.getElementById('auth-btn-camera');
   const _aBtnGal    = document.getElementById('auth-btn-galeria');
   const _aFotoInput = document.getElementById('auth-foto-input');
@@ -225,7 +225,6 @@ function handleLogout() {
   svcManager  = null;
   document.getElementById('app').style.display          = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  // reset form
   document.getElementById('auth-email').value = '';
   document.getElementById('auth-senha').value = '';
   document.getElementById('login-error').textContent = '';
@@ -236,9 +235,9 @@ function handleLogout() {
   atualizarCamposCadastro(false);
 }
 
-// ══════════════════════════════════════════════
+
 // INICIAR APP
-// ══════════════════════════════════════════════
+
 function iniciarApp() {
   currentUser = authManager.getUsuarioAtual();
   document.getElementById('login-screen').style.display = 'none';
@@ -268,6 +267,7 @@ function iniciarApp() {
   }
 
   // Sheets comuns
+  bindSheetSenha();
   document.querySelectorAll('.nx-overlay').forEach(el => {
     const name = el.id.replace('overlay-','');
     el.addEventListener('click', () => closeSheet(name));
@@ -304,12 +304,16 @@ function iniciarApp() {
 
 // iniciarApp() é chamado dentro do DOMContentLoaded (ver fim do arquivo)
 
-// ══════════════════════════════════════════════
 // ── PRESTADOR: AGENDA ──
-// ══════════════════════════════════════════════
+
 function bindEventosPrestador() {
   document.getElementById('btn-logout-p').addEventListener('click', handleLogout);
-  document.getElementById('btn-perfil-p').addEventListener('click', abrirSheetPerfil);
+  document.getElementById('btn-perfil-p').addEventListener('click', () => {
+    irParaTab('tabbar-prestador', 'tab-perfil-p');
+    renderTelaPerfil('p');
+  });
+  document.getElementById('btn-editar-perfil-p').addEventListener('click', abrirSheetEditarPerfil);
+  document.getElementById('btn-trocar-senha-p').addEventListener('click', () => openSheet('senha'));
   document.getElementById('btn-mes-prev').addEventListener('click', () => {
     if (currentMes === 0) { currentMes=11; currentAno--; } else currentMes--;
     selectedDate = `${currentAno}-${String(currentMes+1).padStart(2,'0')}-01`;
@@ -424,9 +428,9 @@ function renderListaAgenda() {
   });
 }
 
-// ══════════════════════════════════════════════
+
 // ── PRESTADOR: SERVIÇOS ──
-// ══════════════════════════════════════════════
+
 function renderServicosPrestador() {
   const servicos = svcManager.listar();
   const ul    = document.getElementById('lista-servicos-ul');
@@ -497,9 +501,8 @@ function salvarServico() {
   } catch(e) { showToast(e.message); }
 }
 
-// ══════════════════════════════════════════════
-// ── PRESTADOR: DASHBOARD ──
-// ══════════════════════════════════════════════
+// PRESTADOR: DASHBOARD 
+
 function renderResumo() {
   document.getElementById('res-mes-label').textContent = fmt.mesAno(resMes, resAno);
   const apts     = aptManager.listarDePrestador(currentUser.id, { mes:resMes, ano:resAno });
@@ -537,9 +540,9 @@ function renderResumo() {
   });
 }
 
-// ══════════════════════════════════════════════
-// ── PRESTADOR: CHATS ──
-// ══════════════════════════════════════════════
+
+//  PRESTADOR: CHATS 
+
 function renderChatsPrestador() {
   const apts  = aptManager.listarDePrestador(currentUser.id);
   const ul    = document.getElementById('lista-chats-p');
@@ -569,12 +572,17 @@ function renderChatsPrestador() {
   });
 }
 
-// ══════════════════════════════════════════════
-// ── CLIENTE: EXPLORAR ──
-// ══════════════════════════════════════════════
+
+//  CLIENTE: EXPLORAR 
+
 function bindEventosCliente() {
   document.getElementById('btn-logout-c').addEventListener('click', handleLogout);
-  document.getElementById('btn-perfil-c').addEventListener('click', abrirSheetPerfil);
+  document.getElementById('btn-perfil-c').addEventListener('click', () => {
+    irParaTab('tabbar-cliente', 'tab-perfil-c');
+    renderTelaPerfil('c');
+  });
+  document.getElementById('btn-editar-perfil-c').addEventListener('click', abrirSheetEditarPerfil);
+  document.getElementById('btn-trocar-senha-c').addEventListener('click', () => openSheet('senha'));
   document.getElementById('search-prestador').addEventListener('input', renderPrestadores);
   document.getElementById('btn-confirmar-agendamento').addEventListener('click', confirmarAgendamento);
 }
@@ -666,9 +674,8 @@ function confirmarAgendamento() {
   } catch(e) { showToast(e.message); }
 }
 
-// ══════════════════════════════════════════════
-// ── CLIENTE: MEUS AGENDAMENTOS ──
-// ══════════════════════════════════════════════
+//  CLIENTE: MEUS AGENDAMENTOS 
+
 function renderMeusAgendamentos() {
   const apts  = aptManager.listarDeCliente(currentUser.id);
   const ul    = document.getElementById('lista-meus-apts');
@@ -700,9 +707,9 @@ function renderMeusAgendamentos() {
   });
 }
 
-// ══════════════════════════════════════════════
-// ── CLIENTE: CHATS ──
-// ══════════════════════════════════════════════
+
+// CLIENTE: CHATS 
+
 function renderChatsCliente() {
   const apts  = aptManager.listarDeCliente(currentUser.id);
   const ul    = document.getElementById('lista-chats-c');
@@ -734,9 +741,8 @@ function renderChatsCliente() {
   });
 }
 
-// ══════════════════════════════════════════════
 // ── CHAT ──
-// ══════════════════════════════════════════════
+
 function bindChat() {
   document.getElementById('btn-chat-back').addEventListener('click', fecharChat);
   document.getElementById('btn-chat-send').addEventListener('click', enviarMensagem);
@@ -799,6 +805,7 @@ function renderMensagens() {
     el.appendChild(div);
   });
 
+  // scroll para o fim
   el.scrollTop = el.scrollHeight;
 }
 
@@ -812,52 +819,69 @@ function enviarMensagem() {
   renderMensagens();
 }
 
-// ══════════════════════════════════════════════
 // ── PERFIL: foto de perfil ──
-// ══════════════════════════════════════════════
-function abrirSheetPerfil() {
+
+// Preenche a tela de perfil (aba real, sufixo 'p' ou 'c')
+function renderTelaPerfil(sufixo) {
   const u = authManager.getUsuarioAtual();
   if (!u) return;
 
-  fotoTemp = null;
+  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setEl('perfil-nome-' + sufixo, u.nome);
+  setEl('perfil-email-' + sufixo, u.email);
+  setEl('perfil-doc-' + sufixo, u.perfil === 'cliente' ? `CPF: ${u.cpf || '—'}` : `CNPJ: ${u.cnpj || '—'}`);
 
-  // Preencher dados exibidos
-  document.getElementById('perfil-nome-display').textContent  = u.nome;
-  document.getElementById('perfil-email-display').textContent = u.email;
-  document.getElementById('perfil-doc-display').textContent   =
-    u.perfil === 'cliente' ? `CPF: ${u.cpf || '—'}` : `CNPJ: ${u.cnpj || '—'}`;
-
-  const negocioEl = document.getElementById('perfil-negocio-display');
-  if (u.nomeNegocio) {
-    negocioEl.textContent  = `🏢 ${u.nomeNegocio}`;
-    negocioEl.style.display = 'block';
-  } else {
-    negocioEl.style.display = 'none';
+  // Negócio (só prestador)
+  const negWrap = document.getElementById('perfil-negocio-wrap-p');
+  const negTxt  = document.getElementById('perfil-negocio-p');
+  if (negWrap && negTxt) {
+    if (u.nomeNegocio) { negTxt.textContent = u.nomeNegocio; negWrap.style.display = 'flex'; }
+    else negWrap.style.display = 'none';
   }
 
-  // Foto atual
-  const _pfImg = document.getElementById('perfil-foto-img');
-  const _pfPh  = document.getElementById('perfil-foto-placeholder');
+  // Foto
+  const img = document.getElementById('perfil-foto-img-' + sufixo);
+  const ph  = document.getElementById('perfil-foto-placeholder-' + sufixo);
   if (u.foto) {
-    if (_pfImg) { _pfImg.src = u.foto; _pfImg.style.display = 'block'; }
-    if (_pfPh)  _pfPh.style.display = 'none';
+    if (img) { img.src = u.foto; img.style.display = 'block'; }
+    if (ph)  ph.style.display = 'none';
   } else {
-    if (_pfImg) _pfImg.style.display = 'none';
-    if (_pfPh)  _pfPh.style.display  = 'block';
+    if (img) img.style.display = 'none';
+    if (ph)  ph.style.display  = 'block';
   }
+}
 
+// Abre sheet de edição de foto (botão lápis no topbar)
+function abrirSheetEditarPerfil() {
+  const u = authManager.getUsuarioAtual();
+  if (!u) return;
+  fotoTemp = null;
+  const img = document.getElementById('perfil-foto-img');
+  const ph  = document.getElementById('perfil-foto-placeholder');
+  if (u.foto) {
+    if (img) { img.src = u.foto; img.style.display = 'block'; }
+    if (ph)  ph.style.display = 'none';
+  } else {
+    if (img) img.style.display = 'none';
+    if (ph)  ph.style.display  = 'block';
+  }
   openSheet('perfil');
 }
+
+// Mantido por compatibilidade (não usado diretamente mais)
+function abrirSheetPerfil() { abrirSheetEditarPerfil(); }
 
 function salvarFotoPerfil() {
   if (!fotoTemp) { showToast('Selecione uma foto primeiro.'); return; }
   try {
     authManager.atualizarFoto(currentUser.id, fotoTemp);
-    currentUser = authManager.getUsuarioAtual(); // atualizar referência local
+    currentUser = authManager.getUsuarioAtual();
     showToast('Foto atualizada!');
     closeSheet('perfil');
     fotoTemp = null;
-    // Re-render listas para refletir nova foto
+    // Atualizar foto na tela de perfil e nas listas
+    const sufixo = currentUser.perfil === 'prestador' ? 'p' : 'c';
+    renderTelaPerfil(sufixo);
     if (currentUser.perfil === 'prestador') {
       renderAgenda();
       renderChatsPrestador();
@@ -868,9 +892,43 @@ function salvarFotoPerfil() {
   } catch(e) { showToast(e.message); }
 }
 
-// ══════════════════════════════════════════════
+// ── Trocar Senha ──
+function bindSheetSenha() {
+  const btnSalvar = document.getElementById('btn-salvar-senha');
+  if (!btnSalvar) return;
+  btnSalvar.addEventListener('click', () => {
+    const atual    = document.getElementById('senha-atual').value;
+    const nova     = document.getElementById('senha-nova').value;
+    const confirma = document.getElementById('senha-confirma').value;
+    const errEl    = document.getElementById('senha-error');
+    errEl.textContent = '';
+
+    if (!atual || !nova || !confirma) { errEl.textContent = 'Preencha todos os campos.'; return; }
+    if (nova !== confirma)            { errEl.textContent = 'As senhas não coincidem.'; return; }
+    if (nova.length < 4)              { errEl.textContent = 'A nova senha deve ter ao menos 4 caracteres.'; return; }
+
+    try {
+      const users = JSON.parse(localStorage.getItem('nx2_users') || '[]');
+      const idx   = users.findIndex(u => u.id === currentUser.id);
+      if (idx === -1) throw new Error('Usuário não encontrado.');
+      if (users[idx].senha !== atual) { errEl.textContent = 'Senha atual incorreta.'; return; }
+      users[idx].senha = nova;
+      localStorage.setItem('nx2_users', JSON.stringify(users));
+      // Atualizar sessão
+      const session = { ...currentUser, senha: nova };
+      localStorage.setItem('nx2_session', JSON.stringify(session));
+      currentUser = session;
+      // Limpar campos
+      ['senha-atual','senha-nova','senha-confirma'].forEach(id => document.getElementById(id).value = '');
+      closeSheet('senha');
+      showToast('Senha atualizada com sucesso!');
+    } catch(e) { errEl.textContent = e.message; }
+  });
+}
+
+
 // SETUP INICIAL
-// ══════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
   setupAuth();
   if (authManager.estaLogado()) iniciarApp();
