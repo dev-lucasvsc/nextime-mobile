@@ -1,0 +1,18 @@
+# Dependências do Node
+node_modules/
+
+# Pastas geradas pelo Cordova
+platforms/
+plugins/
+
+# Arquivos de log
+*.log
+npm-debug.log*
+
+# Arquivos de sistema operacional (Mac/Windows)
+.DS_Store
+Thumbs.db
+
+# Arquivos de IDE (opcional, mas recomendado se usar VSCode/WebStorm)
+.vscode/
+.idea/
