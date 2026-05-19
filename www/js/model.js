@@ -4,7 +4,7 @@
  */
 
 class User {
-  constructor({ id = null, nome, email, senha, perfil, cpf = null, cnpj = null, nomeNegocio = null, foto = null }) {
+  constructor({ id = null, nome, email, senha, perfil, cpf = null, cnpj = null, nomeNegocio = null, foto = null, cep = null, cidade = null, bairro = null, estado = null, situacaoCnpj = null }) {
     this.id          = id || `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.nome        = nome;
     this.email       = email.toLowerCase().trim();
@@ -13,6 +13,11 @@ class User {
     this.cpf         = cpf;          // apenas clientes (fictício)
     this.cnpj        = cnpj;         // apenas prestadores (fictício)
     this.nomeNegocio = nomeNegocio;  // apenas prestadores
+    this.cep         = cep || null;        // endereço via ViaCEP
+    this.cidade      = cidade || null;
+    this.bairro      = bairro || null;
+    this.estado      = estado || null;
+    this.situacaoCnpj= situacaoCnpj || null; // situação Receita Federal
     this.foto        = foto;         // base64 da foto de perfil (câmera ou galeria)
     this.criadoEm    = new Date().toISOString();
   }
@@ -81,12 +86,17 @@ const Mask = {
     );
   },
   apply(input, tipo) {
-    input.addEventListener('input', () => {
-      const pos = input.selectionStart;
-      const raw = input.value;
-      input.value = Mask[tipo](raw);
-      // manter cursor aproximado
-      try { input.setSelectionRange(pos, pos); } catch(_) {}
+    input.addEventListener('input', (e) => {
+      // Quantidade de dígitos antes do cursor (ignora pontuação)
+      const beforeCursor = input.value.slice(0, input.selectionStart).replace(/\D/g, '').length;
+      input.value = Mask[tipo](input.value);
+      // Reposicionar cursor: contar dígitos até atingir beforeCursor novamente
+      let digits = 0, newPos = 0;
+      for (let i = 0; i < input.value.length; i++) {
+        if (/\d/.test(input.value[i])) digits++;
+        if (digits === beforeCursor) { newPos = i + 1; break; }
+      }
+      try { input.setSelectionRange(newPos, newPos); } catch(_) {}
     });
   }
 };

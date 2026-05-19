@@ -1,0 +1,22 @@
+<script type="module">
+
+async function testarCEP() {
+  const data = await ApiViaCEP.buscarCEP('01001000');
+  console.log('RETORNO FINAL:', data);
+}
+
+async function testarCNPJ() {
+  const data = await ApiReceitaWS.consultarCNPJ('27865757000102');
+  console.log('RETORNO FINAL:', data);
+}
+
+async function testarFeriados() {
+  const data = await ApiBrasilAPI.buscarFeriados(2026);
+  console.log('RETORNO FINAL:', data);
+}
+
+window.testarCEP = testarCEP;
+window.testarCNPJ = testarCNPJ;
+window.testarFeriados = testarFeriados;
+
+</script>

@@ -38,11 +38,13 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// Avatar: usa ApiDiceBear do api-service.js
 function avatarHtml(user, cls='') {
   if (user && user.foto) {
     return `<div class="avatar ${cls}"><img src="${user.foto}" alt="${user.nome}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/></div>`;
   }
-  return `<div class="avatar ${cls}">${iniciaisNome(user ? user.nome : '?')}</div>`;
+  const url = ApiDiceBear.avatarUrl(user ? user.nome : 'U');
+  return `<div class="avatar ${cls}"><img src="${url}" alt="${user ? user.nome : '?'}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/></div>`;
 }
 
 function statusBadge(status) {
@@ -122,14 +124,94 @@ function setupAuth() {
 
   // Submit
   document.getElementById('auth-submit-btn').addEventListener('click', handleAuthSubmit);
-  ['auth-email','auth-senha','auth-nome','auth-negocio','auth-cpf','auth-cnpj'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') handleAuthSubmit(); });
+
+  // ── Enter navega para o próximo campo visível; no último submete ──
+  function getVisibleInputs() {
+    return Array.from(document.querySelectorAll(
+      '#login-screen input:not([type=hidden]):not([readonly])'
+    )).filter(el => el.offsetParent !== null && el.style.display !== 'none');
+  }
+  document.getElementById('login-screen').addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    const inputs = getVisibleInputs();
+    const idx    = inputs.indexOf(document.activeElement);
+    if (idx === -1) return;
+    e.preventDefault();
+    // Disparar blur para acionar validações (CNPJ, CEP)
+    document.activeElement.dispatchEvent(new Event('blur'));
+    if (idx < inputs.length - 1) {
+      inputs[idx + 1].focus();
+    } else {
+      handleAuthSubmit();
+    }
   });
 
   // Máscaras
   Mask.apply(document.getElementById('auth-cpf'),  'cpf');
   Mask.apply(document.getElementById('auth-cnpj'), 'cnpj');
+
+  // ── API 2: ViaCEP + IBGE — endereço e microrregião pelo CEP ──
+  const cepInput = document.getElementById('auth-cep');
+  if (cepInput) {
+    cepInput.addEventListener('blur', async () => {
+      const cep = cepInput.value.replace(/\D/g,'');
+      if (cep.length !== 8) return;
+      const statusEl = document.getElementById('auth-cep-status');
+      if (statusEl) { statusEl.textContent = '🔍 Buscando CEP…'; statusEl.style.color = 'var(--nx-muted)'; }
+      try {
+        const data = await ApiViaCEP.buscarCEP(cep);
+        const cidade = document.getElementById('auth-cidade');
+        const bairro = document.getElementById('auth-bairro');
+        const estado = document.getElementById('auth-estado');
+        if (cidade) cidade.value = data.localidade || '';
+        if (bairro) bairro.value = data.bairro      || '';
+        if (estado) estado.value = data.uf           || '';
+        const micro = data.microrregiao ? ` · ${data.microrregiao}` : '';
+        if (statusEl) {
+          statusEl.textContent = `📍 ${data.bairro ? data.bairro+', ' : ''}${data.localidade} — ${data.uf}${micro}`;
+          statusEl.style.color = 'var(--nx-accent)';
+        }
+      } catch(e) {
+        if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--nx-red)'; }
+      }
+    });
+  }
+
+  // ── API 3: BrasilAPI CNPJ — valida CNPJ via Receita Federal (sem CORS) ──
+  const cnpjInput = document.getElementById('auth-cnpj');
+  if (cnpjInput) {
+    cnpjInput.addEventListener('blur', async () => {
+      if (perfilSelecionado !== 'prestador') return;
+      const cnpj = cnpjInput.value.replace(/\D/g,'');
+      if (cnpj.length !== 14) return;
+      const statusEl = document.getElementById('auth-cnpj-status');
+      if (statusEl) { statusEl.textContent = '🔍 Consultando Receita Federal…'; statusEl.style.color = 'var(--nx-muted)'; }
+      try {
+        const data = await ApiReceitaWS.consultarCNPJ(cnpj);
+        // Preencher Razão Social (somente leitura, vem da Receita)
+        const razaoInput = document.getElementById('auth-razao');
+        if (razaoInput) razaoInput.value = data.razaoSocial || '';
+        // Preencher Nome Fantasia (editável, pré-preenchido)
+        const fantasiaInput = document.getElementById('auth-fantasia');
+        if (fantasiaInput && !fantasiaInput.value.trim()) {
+          fantasiaInput.value = data.fantasia || data.razaoSocial || '';
+        }
+        // Manter compatibilidade: preencher auth-negocio também
+        const negocioInput = document.getElementById('auth-negocio');
+        if (negocioInput && !negocioInput.value.trim()) {
+          negocioInput.value = data.fantasia || data.razaoSocial || '';
+        }
+        if (statusEl) {
+          statusEl.textContent = `✅ ${data.razaoSocial} — ${data.situacao}`;
+          statusEl.style.color = 'var(--nx-accent)';
+        }
+        cnpjInput.dataset.situacaoCnpj = data.situacao;
+      } catch(e) {
+        if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--nx-red)'; }
+        cnpjInput.dataset.situacaoCnpj = '';
+      }
+    });
+  }
 
   // ── Câmera / Galeria no cadastro
   const _aBtnCam    = document.getElementById('auth-btn-camera');
@@ -153,7 +235,7 @@ function setupAuth() {
 }
 
 function atualizarCamposCadastro(isCad) {
-  const campos = ['auth-nome','auth-negocio','auth-cpf','auth-cnpj'];
+  const campos = ['auth-nome','auth-negocio','auth-razao','auth-fantasia','auth-cpf','auth-cnpj'];
   campos.forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
   const fw = document.getElementById('auth-foto-wrap');
   if (fw) fw.style.display = isCad ? 'flex' : 'none';
@@ -174,9 +256,32 @@ function atualizarCamposPerfil() {
   if (modoAuth === 'cadastro') {
     document.getElementById('auth-nome').style.display = 'block';
   }
-  document.getElementById('auth-negocio').style.display = perfilSelecionado === 'prestador' ? 'block' : 'none';
-  document.getElementById('auth-cpf').style.display     = perfilSelecionado === 'cliente'   ? 'block' : 'none';
-  document.getElementById('auth-cnpj').style.display    = perfilSelecionado === 'prestador' ? 'block' : 'none';
+  const ehPrestador = perfilSelecionado === 'prestador';
+  document.getElementById('auth-negocio').style.display    = ehPrestador ? 'block' : 'none';
+  document.getElementById('auth-cpf').style.display        = ehPrestador ? 'none'  : 'block';
+  document.getElementById('auth-cnpj').style.display       = ehPrestador ? 'block' : 'none';
+  // Campos Razão Social e Nome Fantasia (só prestador)
+  const razaoEl = document.getElementById('auth-razao');
+  const fantasiaEl = document.getElementById('auth-fantasia');
+  if (razaoEl)    razaoEl.style.display    = ehPrestador ? 'block' : 'none';
+  if (fantasiaEl) fantasiaEl.style.display = ehPrestador ? 'block' : 'none';
+  // CEP e endereço: ambos os perfis no cadastro
+  const isCad = modoAuth === 'cadastro';
+  const camposCnpj = ['auth-cnpj-status', 'auth-negocio', 'auth-cnpj'];
+  camposCnpj.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = ehPrestador ? 'block' : 'none';
+  });
+  // Placeholder do CEP muda conforme perfil
+  const cepEl = document.getElementById('auth-cep');
+  if (cepEl) {
+    cepEl.placeholder = ehPrestador ? 'CEP da empresa' : 'Seu CEP (para filtros de proximidade)';
+    cepEl.style.display = isCad ? 'block' : 'none';
+  }
+  ['auth-cep-status','auth-cidade','auth-bairro','auth-estado'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isCad ? 'block' : 'none';
+  });
 }
 
 function handleAuthSubmit() {
@@ -197,13 +302,38 @@ function handleAuthSubmit() {
         const cpf = document.getElementById('auth-cpf').value.trim();
         if (!cpf) throw new Error('Informe o CPF.');
         dados.cpf = cpf;
+        // Salvar localização do cliente (para filtros de proximidade)
+        const cidadeEl = document.getElementById('auth-cidade');
+        const bairroEl = document.getElementById('auth-bairro');
+        const estadoEl = document.getElementById('auth-estado');
+        const cepEl    = document.getElementById('auth-cep');
+        dados.cep    = cepEl    ? cepEl.value.replace(/\D/g,'') || null : null;
+        dados.cidade = cidadeEl ? cidadeEl.value.trim() || null : null;
+        dados.bairro = bairroEl ? bairroEl.value.trim() || null : null;
+        dados.estado = estadoEl ? estadoEl.value.trim() || null : null;
       } else {
         const cnpj       = document.getElementById('auth-cnpj').value.trim();
         const nomeNegocio = document.getElementById('auth-negocio').value.trim();
         if (!cnpj)        throw new Error('Informe o CNPJ.');
         if (!nomeNegocio) throw new Error('Informe o nome do negócio.');
-        dados.cnpj       = cnpj;
+        dados.cnpj        = cnpj;
         dados.nomeNegocio = nomeNegocio;
+        // Razão Social e Nome Fantasia
+        const razaoEl    = document.getElementById('auth-razao');
+        const fantasiaEl = document.getElementById('auth-fantasia');
+        dados.razaoSocial = razaoEl    ? razaoEl.value.trim()    || null : null;
+        dados.fantasia    = fantasiaEl ? fantasiaEl.value.trim() || null : null;
+        // Dados vindos das APIs
+        const cnpjEl = document.getElementById('auth-cnpj');
+        dados.situacaoCnpj = cnpjEl ? cnpjEl.dataset.situacaoCnpj || null : null;
+        const cidadeEl = document.getElementById('auth-cidade');
+        const bairroEl = document.getElementById('auth-bairro');
+        const estadoEl = document.getElementById('auth-estado');
+        const cepEl    = document.getElementById('auth-cep');
+        dados.cep    = cepEl    ? cepEl.value.replace(/\D/g,'') || null : null;
+        dados.cidade = cidadeEl ? cidadeEl.value.trim() || null : null;
+        dados.bairro = bairroEl ? bairroEl.value.trim() || null : null;
+        dados.estado = estadoEl ? estadoEl.value.trim() || null : null;
       }
 
       authManager.cadastrar(dados);
@@ -240,6 +370,12 @@ function handleLogout() {
 
 function iniciarApp() {
   currentUser = authManager.getUsuarioAtual();
+  // ── Migração: recarregar currentUser do storage (tem campos novos) ──
+  // Garante que dados salvos em sessões anteriores sejam atualizados
+  if (currentUser) {
+    const fresh = authManager.buscarPorId(currentUser.id);
+    if (fresh) currentUser = fresh;
+  }
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display          = 'block';
 
@@ -340,29 +476,47 @@ function bindEventosPrestador() {
   document.getElementById('btn-salvar-servico').addEventListener('click', salvarServico);
 }
 
+// API 4: BrasilAPI Feriados — delegado ao api-service.js
+async function carregarFeriados(ano) {
+  return await ApiBrasilAPI.buscarFeriados(ano);
+}
+
 function renderAgenda() {
   document.getElementById('mes-label').textContent = fmt.mesAno(currentMes, currentAno);
   renderDaysStrip();
   renderListaAgenda();
 }
 
-function renderDaysStrip() {
-  const strip  = document.getElementById('days-strip');
-  const dias   = fmt.diasNoMes(currentMes, currentAno);
-  const nomes  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const apts   = aptManager.listarDePrestador(currentUser.id, { mes: currentMes, ano: currentAno });
+async function renderDaysStrip() {
+  const strip    = document.getElementById('days-strip');
+  const dias     = fmt.diasNoMes(currentMes, currentAno);
+  const nomes    = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const apts     = aptManager.listarDePrestador(currentUser.id, { mes: currentMes, ano: currentAno });
+  const feriados = await carregarFeriados(currentAno);
 
   strip.innerHTML = '';
   for (let d = 1; d <= dias; d++) {
-    const ds  = `${currentAno}-${String(currentMes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dt  = new Date(ds+'T00:00:00');
-    const tem = apts.some(a => a.data === ds);
-    const ativo = ds === selectedDate;
+    const ds       = `${currentAno}-${String(currentMes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt       = new Date(ds+'T00:00:00');
+    const tem      = apts.some(a => a.data === ds);
+    const ativo    = ds === selectedDate;
+    const feriado  = feriados[ds];
 
     const chip = document.createElement('div');
-    chip.className = `day-chip${ativo ? ' active' : ''}`;
-    chip.innerHTML = `<span style="font-size:10px;">${nomes[dt.getDay()]}</span><span class="day-num">${d}</span>${tem ? '<div class="day-dot"></div>' : '<div style="height:7px;"></div>'}`;
-    chip.addEventListener('click', () => { selectedDate = ds; renderDaysStrip(); renderListaAgenda(); });
+    chip.className = `day-chip${ativo ? ' active' : ''}${feriado ? ' feriado' : ''}`;
+    chip.title = feriado || '';
+    chip.innerHTML = `
+      <span style="font-size:10px;">${nomes[dt.getDay()]}</span>
+      <span class="day-num">${d}</span>
+      ${feriado ? '<div class="day-dot" style="background:var(--nx-yellow);"></div>'
+                : tem ? '<div class="day-dot"></div>' : '<div style="height:7px;"></div>'}
+    `;
+    chip.addEventListener('click', () => {
+      selectedDate = ds;
+      renderDaysStrip();
+      renderListaAgenda();
+      if (feriado) showToast(`🎉 Feriado: ${feriado}`);
+    });
     strip.appendChild(chip);
   }
   const active = strip.querySelector('.day-chip.active');
@@ -584,17 +738,192 @@ function bindEventosCliente() {
   document.getElementById('btn-editar-perfil-c').addEventListener('click', abrirSheetEditarPerfil);
   document.getElementById('btn-trocar-senha-c').addEventListener('click', () => openSheet('senha'));
   document.getElementById('search-prestador').addEventListener('input', renderPrestadores);
+  initFiltros();
   document.getElementById('btn-confirmar-agendamento').addEventListener('click', confirmarAgendamento);
 }
 
-function renderPrestadores() {
-  const query     = (document.getElementById('search-prestador').value||'').toLowerCase();
-  const todos     = authManager.listarPrestadores();
-  const listaEl   = document.getElementById('lista-prestadores');
-  const emptyEl   = document.getElementById('empty-prestadores');
+
+// ── Estado dos filtros de localização ──
+let filtroUF       = '';
+let filtroCidade   = '';
+let filtroServico  = '';
+let filtroProxLat  = null;
+let filtroProxLng  = null;
+const RAIO_KM      = 10;
+
+// Haversine: distância em km entre dois pontos lat/lng
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Geocodifica cidade+UF → { lat, lng } via Nominatim (OpenStreetMap, sem key)
+async function geocodificarCidade(cidade, uf) {
+  try {
+    const q = encodeURIComponent(`${cidade}, ${uf}, Brasil`);
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+      headers: { 'Accept-Language': 'pt-BR' }
+    });
+    const d = await r.json();
+    if (d.length) return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
+  } catch(e) { console.warn('[Geo] Erro:', e); }
+  return null;
+}
+
+// Cache de coordenadas por chave "cidade|uf"
+const _geoCache = {};
+
+async function coordenadasDePrestador(p) {
+  if (!p.cidade || !p.estado) return null;
+  const key = `${p.cidade}|${p.estado}`;
+  if (_geoCache[key] !== undefined) return _geoCache[key];
+  _geoCache[key] = null; // evitar múltiplas requisições simultâneas
+  const coords = await geocodificarCidade(p.cidade, p.estado);
+  _geoCache[key] = coords;
+  return coords;
+}
+
+function popularFiltrosUF() {
+  const todos = authManager.listarPrestadores();
+  const ufs = [...new Set(todos.map(p => p.estado).filter(Boolean))].sort();
+  const selUF = document.getElementById('filtro-uf');
+  selUF.innerHTML = '<option value="">Estado (UF)</option>';
+  ufs.forEach(uf => {
+    const opt = document.createElement('option');
+    opt.value = uf; opt.textContent = uf;
+    selUF.appendChild(opt);
+  });
+}
+
+function popularFiltrosCidade(uf) {
+  const todos = authManager.listarPrestadores();
+  const cidades = [...new Set(
+    todos.filter(p => !uf || p.estado === uf).map(p => p.cidade).filter(Boolean)
+  )].sort();
+  const selCidade = document.getElementById('filtro-cidade');
+  selCidade.innerHTML = '<option value="">Cidade</option>';
+  cidades.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    selCidade.appendChild(opt);
+  });
+  selCidade.disabled = cidades.length === 0;
+}
+
+function atualizarBotaoLimpar() {
+  const ativo = filtroUF || filtroCidade || filtroServico || filtroProxLat !== null;
+  document.getElementById('filtro-limpar').style.display = ativo ? 'flex' : 'none';
+}
+
+function popularFiltrosServico() {
+  const todos = authManager.listarPrestadores();
+  const servicos = new Set();
+  todos.forEach(p => {
+    ServiceManager.listarDePrestador(p.id).forEach(s => {
+      if (s.nome) servicos.add(s.nome.trim());
+    });
+  });
+  const sel = document.getElementById('filtro-servico');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Serviço</option>';
+  [...servicos].sort().forEach(nome => {
+    const opt = document.createElement('option');
+    opt.value = nome; opt.textContent = nome;
+    if (nome === atual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.disabled = servicos.size === 0;
+}
+
+function initFiltros() {
+  popularFiltrosUF();
+  popularFiltrosCidade('');
+  popularFiltrosServico();
+
+  document.getElementById('filtro-servico').addEventListener('change', function() {
+    filtroServico = this.value;
+    atualizarBotaoLimpar();
+    renderPrestadores();
+  });
+
+  document.getElementById('filtro-uf').addEventListener('change', function() {
+    filtroUF = this.value;
+    filtroCidade = '';
+    popularFiltrosCidade(filtroUF);
+    document.getElementById('filtro-cidade').value = '';
+    atualizarBotaoLimpar();
+    renderPrestadores();
+  });
+
+  document.getElementById('filtro-cidade').addEventListener('change', function() {
+    filtroCidade = this.value;
+    atualizarBotaoLimpar();
+    renderPrestadores();
+  });
+
+  document.getElementById('filtro-proximidade').addEventListener('click', function() {
+    if (filtroProxLat !== null) {
+      // Toggle off
+      filtroProxLat = filtroProxLng = null;
+      this.classList.remove('active');
+      document.getElementById('filtro-prox-status').style.display = 'none';
+      atualizarBotaoLimpar();
+      renderPrestadores();
+      return;
+    }
+    const statusEl = document.getElementById('filtro-prox-status');
+    statusEl.textContent = '📡 Obtendo localização…';
+    statusEl.style.display = 'block';
+    if (!navigator.geolocation) {
+      statusEl.textContent = '⚠️ Geolocalização não disponível neste dispositivo.';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        filtroProxLat = pos.coords.latitude;
+        filtroProxLng = pos.coords.longitude;
+        this.classList.add('active');
+        statusEl.textContent = `📍 Mostrando prestadores em até ${RAIO_KM} km de você`;
+        atualizarBotaoLimpar();
+        renderPrestadores();
+      },
+      err => {
+        statusEl.textContent = '⚠️ Não foi possível obter sua localização. Verifique as permissões.';
+      },
+      { enableHighAccuracy: false, timeout: 8000 }
+    );
+  });
+
+  document.getElementById('filtro-limpar').addEventListener('click', function() {
+    filtroUF = ''; filtroCidade = ''; filtroServico = '';
+    filtroProxLat = filtroProxLng = null;
+    document.getElementById('filtro-uf').value = '';
+    document.getElementById('filtro-cidade').value = '';
+    const fsEl = document.getElementById('filtro-servico');
+    if (fsEl) fsEl.value = '';
+    document.getElementById('filtro-proximidade').classList.remove('active');
+    document.getElementById('filtro-prox-status').style.display = 'none';
+    popularFiltrosCidade('');
+    this.style.display = 'none';
+    renderPrestadores();
+  });
+}
+
+async function renderPrestadores() {
+  const query   = (document.getElementById('search-prestador').value||'').toLowerCase();
+  const todos   = authManager.listarPrestadores();
+  const listaEl = document.getElementById('lista-prestadores');
+  const emptyEl = document.getElementById('empty-prestadores');
+  const countEl = document.getElementById('filtro-count');
   listaEl.innerHTML = '';
 
-  const filtrados = todos.filter(p => {
+  // Filtro de texto
+  let filtrados = todos.filter(p => {
     const svcs = ServiceManager.listarDePrestador(p.id);
     return !query ||
       p.nome.toLowerCase().includes(query) ||
@@ -602,6 +931,34 @@ function renderPrestadores() {
       svcs.some(s => s.nome.toLowerCase().includes(query));
   });
 
+  // Filtro UF
+  if (filtroUF) filtrados = filtrados.filter(p => p.estado === filtroUF);
+  // Filtro Cidade
+  if (filtroCidade) filtrados = filtrados.filter(p => p.cidade === filtroCidade);
+  // Filtro Serviço — mantém só prestadores que oferecem o serviço filtrado
+  if (filtroServico) {
+    filtrados = filtrados.filter(p => {
+      return ServiceManager.listarDePrestador(p.id)
+        .some(s => s.nome.trim() === filtroServico);
+    });
+  }
+
+  // Filtro por proximidade (geolocalização + geocoding do prestador)
+  let distancias = {};
+  if (filtroProxLat !== null) {
+    const comCoords = await Promise.all(filtrados.map(async p => {
+      const coords = await coordenadasDePrestador(p);
+      if (!coords) return null;
+      const km = haversineKm(filtroProxLat, filtroProxLng, coords.lat, coords.lng);
+      distancias[p.id] = km;
+      return km <= RAIO_KM ? p : null;
+    }));
+    filtrados = comCoords.filter(Boolean);
+    // Ordenar por distância
+    filtrados.sort((a,b) => (distancias[a.id]||999) - (distancias[b.id]||999));
+  }
+
+  if (countEl) countEl.textContent = filtrados.length > 0 ? `${filtrados.length} resultado${filtrados.length>1?'s':''}` : '';
   if (filtrados.length===0) { emptyEl.style.display='block'; return; }
   emptyEl.style.display='none';
 
@@ -609,13 +966,18 @@ function renderPrestadores() {
     const svcs = ServiceManager.listarDePrestador(p.id);
     const card = document.createElement('div');
     card.className = 'prestador-card';
+    const distKm  = distancias[p.id];
+    const distBadge = distKm !== undefined
+      ? `<span style="background:var(--nx-accent);color:#000;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:4px;">${distKm < 1 ? '<1' : distKm.toFixed(1)} km</span>`
+      : '';
     card.innerHTML = `
       <div class="prestador-card-header">
         ${avatarHtml(p,'lg')}
         <div class="prestador-card-info">
-          <div class="prestador-card-nome">${p.nome}</div>
+          <div class="prestador-card-nome">${p.nome} ${distBadge}</div>
           <div class="prestador-card-negocio">🏢 ${p.nomeNegocio||'—'}</div>
-          <div style="font-size:11px;color:var(--nx-muted);margin-top:2px;">CNPJ: ${p.cnpj||'—'}</div>
+          <div style="font-size:11px;color:var(--nx-muted);margin-top:2px;">CNPJ: ${p.cnpj||'—'}${p.situacaoCnpj ? ' · '+p.situacaoCnpj : ''}</div>
+          ${p.cidade ? `<div style="font-size:11px;color:var(--nx-muted);margin-top:1px;">📍 ${p.bairro ? p.bairro+', ' : ''}${p.cidade}${p.estado ? ' — '+p.estado : ''}</div>` : ''}
         </div>
       </div>
       ${svcs.length===0
@@ -641,7 +1003,7 @@ function renderPrestadores() {
   });
 }
 
-function abrirSheetAgendar(prestadorId, servicoId) {
+async function abrirSheetAgendar(prestadorId, servicoId) {
   const svc = ServiceManager.listarDePrestador(prestadorId).find(s=>s.id===servicoId);
   if (!svc) return;
   document.getElementById('agendar-prestador-id').value = prestadorId;
@@ -652,6 +1014,33 @@ function abrirSheetAgendar(prestadorId, servicoId) {
   document.getElementById('agendar-data').value = hoje.toISOString().split('T')[0];
   document.getElementById('agendar-hora').value = '';
   document.getElementById('agendar-obs').value  = '';
+
+  // Mostrar endereço do prestador + distância
+  const prestador = authManager.buscarPorId(prestadorId);
+  const locWrap   = document.getElementById('agendar-localizacao-wrap');
+  const locEndr   = document.getElementById('agendar-prestador-endereco');
+  const distWrap  = document.getElementById('agendar-distancia-wrap');
+  if (prestador && prestador.cidade) {
+    locEndr.textContent = [prestador.bairro, prestador.cidade, prestador.estado].filter(Boolean).join(', ');
+    locWrap.style.display = 'block';
+    // Calcular distância se tiver geolocalização do usuário
+    distWrap.style.display = 'none';
+    if (filtroProxLat !== null) {
+      const coords = await coordenadasDePrestador(prestador);
+      if (coords) {
+        const km = haversineKm(filtroProxLat, filtroProxLng, coords.lat, coords.lng);
+        const badge = document.getElementById('agendar-distancia-badge');
+        const label = document.getElementById('agendar-distancia-label');
+        badge.textContent = km < 1 ? 'Menos de 1 km' : `${km.toFixed(1)} km`;
+        label.textContent = km <= RAIO_KM ? 'de você — próximo!' : 'de você';
+        distWrap.style.display = 'flex';
+        distWrap.style.alignItems = 'center';
+      }
+    }
+  } else {
+    locWrap.style.display = 'none';
+  }
+
   openSheet('agendar');
 }
 
@@ -829,7 +1218,14 @@ function renderTelaPerfil(sufixo) {
   const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setEl('perfil-nome-' + sufixo, u.nome);
   setEl('perfil-email-' + sufixo, u.email);
-  setEl('perfil-doc-' + sufixo, u.perfil === 'cliente' ? `CPF: ${u.cpf || '—'}` : `CNPJ: ${u.cnpj || '—'}`);
+  setEl('perfil-doc-' + sufixo, u.perfil === 'cliente' ? `CPF: ${u.cpf || '—'}` : `CNPJ: ${u.cnpj || '—'}${u.situacaoCnpj ? ' · '+u.situacaoCnpj : ''}`);
+  // Endereço via ViaCEP
+  const endEl = document.getElementById('perfil-endereco-' + sufixo);
+  if (endEl) {
+    endEl.textContent = u.cidade ? `${u.bairro ? u.bairro+', ' : ''}${u.cidade} — ${u.estado||''}` : '';
+    const endWrap = document.getElementById('perfil-endereco-wrap-' + sufixo);
+    if (endWrap) endWrap.style.display = u.cidade ? 'flex' : 'none';
+  }
 
   // Negócio (só prestador)
   const negWrap = document.getElementById('perfil-negocio-wrap-p');

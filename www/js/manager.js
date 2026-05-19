@@ -14,11 +14,26 @@ class AuthManager {
   _getUsers()    { return JSON.parse(localStorage.getItem(this.USERS_KEY) || '[]'); }
   _saveUsers(u)  { localStorage.setItem(this.USERS_KEY, JSON.stringify(u)); }
 
-  cadastrar({ nome, email, senha, perfil, cpf, cnpj, nomeNegocio, foto }) {
+  cadastrar({ nome, email, senha, perfil, cpf, cnpj, nomeNegocio, foto,
+                cep, cidade, bairro, estado, situacaoCnpj, razaoSocial, fantasia }) {
     const users = this._getUsers();
     if (users.find(u => u.email === email.toLowerCase().trim()))
       throw new Error('E-mail já cadastrado.');
-    const user = new User({ nome, email, senha, perfil, cpf: cpf || null, cnpj: cnpj || null, nomeNegocio: nomeNegocio || null, foto: foto || null });
+    const user = new User({
+      nome, email, senha, perfil,
+      cpf:          cpf          || null,
+      cnpj:         cnpj         || null,
+      nomeNegocio:  nomeNegocio  || null,
+      foto:         foto         || null,
+      cep:          cep          || null,
+      cidade:       cidade       || null,
+      bairro:       bairro       || null,
+      estado:       estado       || null,
+      situacaoCnpj: situacaoCnpj || null,
+    });
+    // campos extras não presentes no constructor User mas úteis
+    if (razaoSocial) user.razaoSocial = razaoSocial;
+    if (fantasia)    user.fantasia    = fantasia;
     users.push(user);
     this._saveUsers(users);
     return user;
@@ -30,7 +45,6 @@ class AuthManager {
     if (idx === -1) throw new Error('Usuário não encontrado.');
     users[idx].foto = fotoBase64;
     this._saveUsers(users);
-    // atualizar sessão também
     const session = this.getUsuarioAtual();
     if (session && session.id === userId) {
       session.foto = fotoBase64;
@@ -47,6 +61,20 @@ class AuthManager {
   }
 
   logout()           { localStorage.removeItem(this.SESSION_KEY); }
+
+  atualizarPerfil(userId, campos) {
+    const users = this._getUsers();
+    const idx   = users.findIndex(u => u.id === userId);
+    if (idx === -1) throw new Error('Usuário não encontrado.');
+    users[idx] = { ...users[idx], ...campos };
+    this._saveUsers(users);
+    // atualizar sessão também
+    const session = this.getUsuarioAtual();
+    if (session && session.id === userId) {
+      localStorage.setItem(this.SESSION_KEY, JSON.stringify(users[idx]));
+    }
+    return users[idx];
+  }
   getUsuarioAtual()  { return JSON.parse(localStorage.getItem(this.SESSION_KEY) || 'null'); }
   estaLogado()       { return !!this.getUsuarioAtual(); }
 
@@ -59,9 +87,9 @@ class AuthManager {
   }
 }
 
-// ─────────────────────────────────────────────
+
 // ServiceManager — serviços de um prestador
-// ─────────────────────────────────────────────
+
 class ServiceManager {
   constructor(prestadorId) {
     this.prestadorId = prestadorId;
@@ -95,9 +123,8 @@ class ServiceManager {
   }
 }
 
-// ─────────────────────────────────────────────
 // AppointmentManager — agendamentos globais
-// ─────────────────────────────────────────────
+
 class AppointmentManager {
   constructor() { this.KEY = 'nx2_appointments'; }
   _getAll()      { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
@@ -171,9 +198,9 @@ class AppointmentManager {
   }
 }
 
-// ─────────────────────────────────────────────
+
 // ChatManager — mensagens por agendamento
-// ─────────────────────────────────────────────
+
 class ChatManager {
   _key(aptId)     { return `nx2_chat_${aptId}`; }
   _getAll(aptId)  { return JSON.parse(localStorage.getItem(this._key(aptId)) || '[]'); }
