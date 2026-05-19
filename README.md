@@ -1,108 +1,80 @@
-<div align="center">
+# 📅 Nextime
 
-# nextime
+> **Agendamentos simples. Clientes satisfeitos.**
 
-**Aplicativo mobile de agendamento de serviços**
-
-[![Cordova](https://img.shields.io/badge/Apache_Cordova-12.0-35434F?logo=apache-cordova&logoColor=white)](https://cordova.apache.org/)
-[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/pt-BR/docs/Web/JavaScript)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa)](./LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-00d4aa)]()
-
-> Plataforma que conecta clientes e prestadores de serviço — agendamento, chat e gestão de receita em um único app.
-
-*Disciplina de Desenvolvimento Mobile — Unieuro 2026*
-*Lucas & João Gabriel*
-
-</div>
+Aplicativo mobile de agendamento de serviços com gestão de clientes, desenvolvido com **Apache Cordova** para a disciplina de Desenvolvimento Mobile — Unieuro 2025.
 
 ---
 
-## Sumário
+## 📋 Descrição
 
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Funcionalidades](#funcionalidades)
-- [Tecnologias](#tecnologias)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Como Executar](#como-executar)
-- [Arquitetura](#arquitetura)
-- [Armazenamento de Dados](#armazenamento-de-dados)
-- [Perfis de Usuário](#perfis-de-usuário)
-- [Ciclo de Vida do Agendamento](#ciclo-de-vida-do-agendamento)
-- [Licença](#licença)
+O **Nextime** conecta **clientes** e **prestadores de serviço** em uma plataforma unificada de agendamento. Clientes encontram prestadores e agendam horários; prestadores gerenciam sua agenda, serviços e se comunicam com os clientes via chat integrado.
+
+O app funciona inteiramente no navegador (plataforma `browser` do Cordova), persistindo os dados via `localStorage`, sem necessidade de backend.
 
 ---
 
-## Sobre o Projeto
+## ✨ Funcionalidades
 
-O **Nextime** é um aplicativo mobile desenvolvido com Apache Cordova que resolve o problema da gestão manual de agendamentos entre clientes e prestadores de serviço. Clientes podem descobrir profissionais, solicitar agendamentos e se comunicar via chat integrado. Prestadores gerenciam sua agenda, cadastram serviços e acompanham receita pelo dashboard.
+### 👤 Perfil Cliente
+- Cadastro com CPF, foto de perfil (câmera ou galeria) e endereço via CEP
+- Busca de prestadores disponíveis
+- Agendamento de serviços com seleção de data, hora e observação
+- Acompanhamento de status dos agendamentos (pendente, confirmado, concluído, cancelado, recusado)
+- Chat por agendamento com o prestador
+- Calendário mensal com navegação
 
-O projeto foi desenvolvido como trabalho prático da disciplina de Desenvolvimento Mobile na Unieuro, utilizando JavaScript puro, HTML5 e localStorage — sem dependência de backend externo.
+### 🔧 Perfil Prestador
+- Cadastro com CNPJ (validado via Receita Federal), foto e endereço
+- Gestão de serviços (nome, duração, preço, descrição)
+- Painel de agendamentos com filtros por status e data
+- Confirmação, recusa ou conclusão de agendamentos
+- Chat por agendamento com o cliente
+- Visualização de feriados nacionais no calendário
 
----
+### 🌐 APIs Integradas
 
-## Funcionalidades
-
-### Para o Prestador de Serviço
-- ✅ Cadastro com CNPJ, nome do negócio e foto de perfil
-- 📅 Agenda diária com navegação por mês e seleção de dia
-- 🛠️ Gestão de serviços: cadastrar, editar e remover com nome, preço e duração
-- ⚡ Ações sobre agendamentos: confirmar, recusar, concluir e cancelar
-- 📊 Dashboard com receita mensal e métricas por status
-- 💬 Chat integrado por agendamento com cada cliente
-- 🔒 Edição de foto de perfil e troca de senha
-
-### Para o Cliente
-- 🔍 Explorar prestadores com busca por nome e serviço
-- 📆 Agendar serviços com data, hora e observação
-- 🔔 Acompanhar status dos agendamentos em tempo real
-- 💬 Chat direto com o prestador por agendamento
-- 📋 Histórico completo de agendamentos
-- 🔒 Edição de foto de perfil e troca de senha
-
----
-
-## Tecnologias
-
-| Tecnologia | Versão | Uso |
-|---|---|---|
-| Apache Cordova | ^12.0.0 | Plataforma mobile/browser |
-| cordova-browser | ^7.0.0 | Target de execução |
-| cordova-plugin-camera | ^7.0.0 | Acesso à câmera e galeria |
-| JavaScript | ES6+ | Toda a lógica da aplicação |
-| HTML5 | — | Interface (Single Page Application) |
-| CSS Custom Properties | — | Design system e tema |
-| localStorage | — | Persistência de dados |
-| Material Icons | CDN | Biblioteca de ícones |
-| Plus Jakarta Sans | CDN | Tipografia — títulos e valores |
-| Space Grotesk | CDN | Tipografia — corpo de texto |
+| API | Finalidade | Fonte |
+|-----|-----------|-------|
+| **IBGE** | Lista de municípios brasileiros | dados.gov.br |
+| **ViaCEP** | Preenchimento automático de endereço por CEP | viacep.com.br |
+| **BrasilAPI — CNPJ** | Validação e dados cadastrais de empresas (Receita Federal) | brasilapi.com.br |
+| **BrasilAPI — Feriados** | Feriados nacionais para o calendário | brasilapi.com.br |
+| **DiceBear** | Geração automática de avatar por iniciais do nome | dicebear.com |
 
 ---
 
-## Estrutura do Projeto
+## 🗂️ Estrutura do Projeto
 
 ```
-nextime-mobile-main/
-├── config.xml              # Configuração Cordova (id, plugins, permissões)
+nextime-mobile/
+├── config.xml              # Configuração Cordova (ID, versão, plugins)
 ├── package.json            # Dependências e scripts npm
-└── docs/
-    ├── index.html          # Toda a interface (telas, sheets, modais)
-    ├── css/
-    │   └── app.css         # Design system, variáveis CSS e componentes
-    └── js/
-        ├── model.js        # Classes de dados: User, Service, Appointment, ChatMessage
-        ├── manager.js      # Camada de acesso ao localStorage (CRUD)
-        └── app.js          # Lógica de UI, eventos e renderização
+├── www/                    # Código-fonte da aplicação
+│   ├── index.html          # Estrutura HTML principal (todas as telas)
+│   ├── css/
+│   │   └── app.css         # Estilos globais (tema escuro, componentes)
+│   └── js/
+│       ├── model.js        # Classes de dados: User, Service, Appointment, ChatMessage
+│       ├── manager.js      # Lógica de negócio: AuthManager, ServiceManager,
+│       │                   # AppointmentManager, ChatManager
+│       ├── api-service.js  # Integração com APIs externas (IBGE, ViaCEP, BrasilAPI, DiceBear)
+│       ├── app.js          # Controlador principal: navegação, eventos, renderização
+│       └── cordova-app.js  # Inicialização Cordova (câmera, deviceready)
+├── plugins/
+│   └── cordova-plugin-camera/   # Plugin de câmera/galeria
+└── platforms/
+    └── browser/            # Build para plataforma browser
 ```
 
 ---
 
-## Como Executar
+## 🚀 Como Executar
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) instalado
-- Apache Cordova instalado globalmente
+- [Node.js](https://nodejs.org/) (v14 ou superior)
+- [Apache Cordova](https://cordova.apache.org/) (v13)
 
 ```bash
 npm install -g cordova
@@ -111,132 +83,64 @@ npm install -g cordova
 ### Instalação
 
 ```bash
-# Clone o repositório
-git clone https://github.com/dev-lucasvsc/nextime-mobile.git
-cd nextime-mobile-main
+# 1. Clone o repositório
+git clone https://github.com/seuusuario/nextime-mobile.git
+cd nextime-mobile
 
-# Instale as dependências
+# 2. Instale as dependências
 npm install
 
-# Adicione a plataforma browser
-cordova platform add browser
-```
-
-### Executando
-
-```bash
+# 3. Execute no browser
 npm start
 # ou
 cordova run browser
 ```
 
-O app abrirá automaticamente no navegador padrão.
+O aplicativo abrirá automaticamente em `http://localhost:8000`.
 
 ---
 
-## Arquitetura
+## 🧩 Arquitetura
 
-O projeto segue uma separação clara em três camadas:
+O projeto segue uma arquitetura **MVC simplificada**, sem frameworks externos:
 
-```
-┌─────────────────────────────────────┐
-│            app.js (View)            │
-│   Lógica de UI, eventos, render     │
-├─────────────────────────────────────┤
-│          manager.js (Manager)       │
-│  AuthManager  ServiceManager        │
-│  AppointmentManager  ChatManager    │
-├─────────────────────────────────────┤
-│           model.js (Model)          │
-│  User  Service  Appointment         │
-│  ChatMessage  Mask                  │
-├─────────────────────────────────────┤
-│           localStorage              │
-│       Persistência de dados         │
-└─────────────────────────────────────┘
-```
-
-### model.js — Entidades
-
-| Classe | Campos principais |
-|---|---|
-| `User` | id, nome, email, senha, perfil, cpf/cnpj, foto |
-| `Service` | id, nome, duracao, preco, descricao, prestadorId |
-| `Appointment` | id, clienteId, prestadorId, servicoId, data, hora, status |
-| `ChatMessage` | id, aptId, remetenteId, texto, timestamp |
-
-### manager.js — Acesso a Dados
-
-| Classe | Responsabilidade |
-|---|---|
-| `AuthManager` | Cadastro, login, logout, sessão ativa |
-| `ServiceManager` | CRUD de serviços por prestador |
-| `AppointmentManager` | CRUD de agendamentos, filtros, métricas |
-| `ChatManager` | Envio e leitura de mensagens por agendamento |
+- **Model** (`model.js`): Classes `User`, `Service`, `Appointment` e `ChatMessage` com geração automática de IDs únicos.
+- **Manager** (`manager.js`): Camada de negócio que lê e persiste dados no `localStorage`. Classes `AuthManager`, `ServiceManager`, `AppointmentManager` e `ChatManager`.
+- **View + Controller** (`index.html` + `app.js`): Renderização dinâmica de componentes e gerenciamento de eventos do usuário.
+- **Serviços** (`api-service.js`): Módulo isolado de chamadas às APIs externas, com cache local de 24h via `localStorage`.
 
 ---
 
-## Armazenamento de Dados
+## 📦 Dependências
 
-Toda a persistência é feita via `localStorage` do browser, sem backend externo.
+| Pacote | Versão | Uso |
+|--------|--------|-----|
+| `cordova` | ^13.0.0 | Framework mobile |
+| `cordova-browser` | ^7.0.0 | Plataforma browser |
+| `cordova-plugin-camera` | ^7.0.0 | Acesso à câmera e galeria |
 
-| Chave | Tipo | Conteúdo |
-|---|---|---|
-| `nx2_users` | `Array<User>` | Todos os usuários cadastrados |
-| `nx2_session` | `User` | Usuário da sessão ativa |
-| `nx2_services_{prestadorId}` | `Array<Service>` | Serviços de um prestador |
-| `nx2_appointments` | `Array<Appointment>` | Todos os agendamentos |
-| `nx2_chat_{aptId}` | `Array<ChatMessage>` | Mensagens de um agendamento |
-
-> ⚠️ **Atenção:** por ser um protótipo acadêmico, as senhas são armazenadas em texto puro e os dados são locais ao browser. Limpar os dados do navegador apaga toda a base.
+**Fontes externas (CDN):**
+- Google Fonts — `Syne` e `DM Sans`
+- Google Material Icons Round
 
 ---
 
-## Perfis de Usuário
+## 🎨 Design
 
-O app possui dois perfis com interfaces completamente distintas:
-
-**Cliente**
-- Cadastro com CPF
-- Acesso às abas: Explorar, Meus Agendamentos, Chats, Perfil
-
-**Prestador**
-- Cadastro com CNPJ e nome do negócio
-- Acesso às abas: Agenda, Serviços, Dashboard, Chats, Perfil
+- Tema escuro com fundo `#0a0a0f`
+- Tipografia principal: **Syne** (títulos) e **DM Sans** (corpo)
+- Sistema de sheets (bottom sheets) para formulários e detalhes
+- Componentes: badges de status coloridos, avatares gerados automaticamente, toast de notificações, tabs de navegação
 
 ---
 
-## Ciclo de Vida do Agendamento
+## 👥 Autores
 
-```
-                    ┌─────────────┐
-                    │   pendente  │  ← criado pelo cliente
-                    └──────┬──────┘
-              ┌────────────┴────────────┐
-              ▼                         ▼
-       ┌─────────────┐          ┌─────────────┐
-       │ confirmado  │          │  recusado   │
-       └──────┬──────┘          └─────────────┘
-       ┌──────┴──────┐
-       ▼             ▼
-┌───────────┐  ┌───────────┐
-│ concluido │  │ cancelado │
-└───────────┘  └───────────┘
-```
-
-| Status | Cor | Ação |
-|---|---|---|
-| `pendente` | 🟡 Amarelo | Aguardando resposta do prestador |
-| `confirmado` | 🔵 Azul | Prestador aceitou |
-| `concluido` | 🟢 Verde | Serviço realizado |
-| `cancelado` | 🔴 Vermelho | Cancelado após confirmação |
-| `recusado` | ⚫ Cinza | Prestador recusou a solicitação |
-
+**Lucas e Parceiro** — Unieuro 2025
+Disciplina: Desenvolvimento Mobile
 
 ---
 
-<div align="center">
+## 📄 Licença
 
-Feito por **Lucas & João Gabriel** — Unieuro 2026
-
-</div>
+Este projeto está licenciado sob a licença **MIT**. Consulte o arquivo `LICENSE` para mais detalhes.
