@@ -157,7 +157,11 @@ function setupAuth() {
       const cep = cepInput.value.replace(/\D/g,'');
       if (cep.length !== 8) return;
       const statusEl = document.getElementById('auth-cep-status');
-      if (statusEl) { statusEl.textContent = '🔍 Buscando CEP…'; statusEl.style.color = 'var(--nx-muted)'; }
+      if (statusEl) {
+        statusEl.innerHTML = '<span class="api-loading"><span class="api-spinner"></span> Buscando CEP…</span>';
+        statusEl.style.color = 'var(--text-muted)';
+        statusEl.style.display = 'block';
+      }
       try {
         const data = await ApiViaCEP.buscarCEP(cep);
         const cidade = document.getElementById('auth-cidade');
@@ -168,11 +172,14 @@ function setupAuth() {
         if (estado) estado.value = data.uf           || '';
         const micro = data.microrregiao ? ` · ${data.microrregiao}` : '';
         if (statusEl) {
-          statusEl.textContent = `📍 ${data.bairro ? data.bairro+', ' : ''}${data.localidade} — ${data.uf}${micro}`;
-          statusEl.style.color = 'var(--nx-accent)';
+          statusEl.innerHTML = `<span style="color:var(--accent)">✅ ${data.bairro ? data.bairro+', ' : ''}${data.localidade} — ${data.uf}${micro}</span>`;
+          statusEl.style.display = 'block';
         }
       } catch(e) {
-        if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--nx-red)'; }
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color:var(--red)">⚠️ ${e.message}</span>`;
+          statusEl.style.display = 'block';
+        }
       }
     });
   }
@@ -185,7 +192,10 @@ function setupAuth() {
       const cnpj = cnpjInput.value.replace(/\D/g,'');
       if (cnpj.length !== 14) return;
       const statusEl = document.getElementById('auth-cnpj-status');
-      if (statusEl) { statusEl.textContent = '🔍 Consultando Receita Federal…'; statusEl.style.color = 'var(--nx-muted)'; }
+      if (statusEl) {
+        statusEl.innerHTML = '<span class="api-loading"><span class="api-spinner"></span> Consultando Receita Federal…</span>';
+        statusEl.style.display = 'block';
+      }
       try {
         const data = await ApiReceitaWS.consultarCNPJ(cnpj);
         // Preencher Razão Social (somente leitura, vem da Receita)
@@ -202,12 +212,15 @@ function setupAuth() {
           negocioInput.value = data.fantasia || data.razaoSocial || '';
         }
         if (statusEl) {
-          statusEl.textContent = `✅ ${data.razaoSocial} — ${data.situacao}`;
-          statusEl.style.color = 'var(--nx-accent)';
+          statusEl.innerHTML = `<span style="color:var(--accent)">✅ ${data.razaoSocial} — ${data.situacao}</span>`;
+          statusEl.style.display = 'block';
         }
         cnpjInput.dataset.situacaoCnpj = data.situacao;
       } catch(e) {
-        if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--nx-red)'; }
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color:var(--red)">⚠️ ${e.message}</span>`;
+          statusEl.style.display = 'block';
+        }
         cnpjInput.dataset.situacaoCnpj = '';
       }
     });
@@ -494,6 +507,9 @@ async function renderDaysStrip() {
   const apts     = aptManager.listarDePrestador(currentUser.id, { mes: currentMes, ano: currentAno });
   const feriados = await carregarFeriados(currentAno);
 
+  // Loading state brevíssimo para mostrar que feriados são buscados na API
+  strip.innerHTML = '<div class="api-loading-inline"><span class="api-spinner"></span></div>';
+  await new Promise(r => setTimeout(r, 0));
   strip.innerHTML = '';
   for (let d = 1; d <= dias; d++) {
     const ds       = `${currentAno}-${String(currentMes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -761,30 +777,80 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Geocodifica cidade+UF → { lat, lng } via Nominatim (OpenStreetMap, sem key)
-async function geocodificarCidade(cidade, uf) {
+// ── Geocoding via Nominatim ──
+// Prioridade: CEP (mais preciso) → cidade+UF (fallback)
+// Cache em localStorage (24h) para evitar requisições repetidas
+
+const _geoMemCache = {}; // cache em memória por aba
+
+async function _nominatimBuscar(query, cacheKey) {
+  // 1. cache em memória
+  if (_geoMemCache[cacheKey] !== undefined) return _geoMemCache[cacheKey];
+
+  // 2. cache no localStorage (24h)
+  const lsKey = `nx2_geo_${cacheKey}`;
   try {
-    const q = encodeURIComponent(`${cidade}, ${uf}, Brasil`);
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-      headers: { 'Accept-Language': 'pt-BR' }
-    });
+    const raw = localStorage.getItem(lsKey);
+    if (raw) {
+      const { coords, ts } = JSON.parse(raw);
+      if (Date.now() - ts < 86400000) {
+        _geoMemCache[cacheKey] = coords;
+        return coords;
+      }
+      localStorage.removeItem(lsKey);
+    }
+  } catch(_) {}
+
+  // 3. bloquear requisições duplicadas simultâneas
+  _geoMemCache[cacheKey] = null;
+
+  try {
+    console.log('[Geo] Buscando:', query);
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br`,
+      { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'Nextime/2.0' } }
+    );
     const d = await r.json();
-    if (d.length) return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
-  } catch(e) { console.warn('[Geo] Erro:', e); }
+    if (d && d.length) {
+      const coords = { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
+      _geoMemCache[cacheKey] = coords;
+      // salvar no localStorage
+      try {
+        localStorage.setItem(lsKey, JSON.stringify({ coords, ts: Date.now() }));
+      } catch(_) {}
+      console.log('[Geo] Resultado:', cacheKey, coords);
+      return coords;
+    }
+  } catch(e) {
+    console.warn('[Geo] Erro:', e.message);
+  }
+
+  _geoMemCache[cacheKey] = null;
   return null;
 }
 
-// Cache de coordenadas por chave "cidade|uf"
-const _geoCache = {};
-
 async function coordenadasDePrestador(p) {
-  if (!p.cidade || !p.estado) return null;
-  const key = `${p.cidade}|${p.estado}`;
-  if (_geoCache[key] !== undefined) return _geoCache[key];
-  _geoCache[key] = null; // evitar múltiplas requisições simultâneas
-  const coords = await geocodificarCidade(p.cidade, p.estado);
-  _geoCache[key] = coords;
-  return coords;
+  // Tentar CEP primeiro (mais preciso — endereço específico)
+  if (p.cep) {
+    const cep = p.cep.replace(/\D/g, '');
+    if (cep.length === 8) {
+      const coords = await _nominatimBuscar(`${cep}, Brasil`, `cep_${cep}`);
+      if (coords) return coords;
+    }
+  }
+
+  // Fallback: bairro + cidade + UF (mais preciso que só cidade)
+  if (p.cidade && p.estado) {
+    const query = p.bairro
+      ? `${p.bairro}, ${p.cidade}, ${p.estado}, Brasil`
+      : `${p.cidade}, ${p.estado}, Brasil`;
+    const key = p.bairro
+      ? `bairro_${p.bairro}_${p.cidade}_${p.estado}`
+      : `cidade_${p.cidade}_${p.estado}`;
+    return await _nominatimBuscar(query, key);
+  }
+
+  return null;
 }
 
 function popularFiltrosUF() {
@@ -877,10 +943,10 @@ function initFiltros() {
       return;
     }
     const statusEl = document.getElementById('filtro-prox-status');
-    statusEl.textContent = '📡 Obtendo localização…';
+    statusEl.innerHTML = '<span class="api-loading"><span class="api-spinner"></span> Obtendo localização GPS…</span>';
     statusEl.style.display = 'block';
     if (!navigator.geolocation) {
-      statusEl.textContent = '⚠️ Geolocalização não disponível neste dispositivo.';
+      statusEl.innerHTML = '<span style="color:var(--red)">⚠️ Geolocalização não disponível neste dispositivo.</span>';
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -888,12 +954,14 @@ function initFiltros() {
         filtroProxLat = pos.coords.latitude;
         filtroProxLng = pos.coords.longitude;
         this.classList.add('active');
-        statusEl.textContent = `📍 Mostrando prestadores em até ${RAIO_KM} km de você`;
+        statusEl.innerHTML = `<span style="color:var(--accent)">📍 Mostrando prestadores em até ${RAIO_KM} km de você</span>`;
+        // Abrir mapa com localização do usuário
+        abrirMapaUsuario(filtroProxLat, filtroProxLng);
         atualizarBotaoLimpar();
         renderPrestadores();
       },
       err => {
-        statusEl.textContent = '⚠️ Não foi possível obter sua localização. Verifique as permissões.';
+        statusEl.innerHTML = '<span style="color:var(--red)">⚠️ Não foi possível obter sua localização. Verifique as permissões.</span>';
       },
       { enableHighAccuracy: false, timeout: 8000 }
     );
@@ -920,7 +988,10 @@ async function renderPrestadores() {
   const listaEl = document.getElementById('lista-prestadores');
   const emptyEl = document.getElementById('empty-prestadores');
   const countEl = document.getElementById('filtro-count');
-  listaEl.innerHTML = '';
+  // Loading state
+  listaEl.innerHTML = '<div class="api-loading-block"><span class="api-spinner"></span><span>Carregando prestadores…</span></div>';
+  emptyEl.style.display = 'none';
+  await new Promise(r => setTimeout(r, 0)); // yield para render
 
   // Filtro de texto
   let filtrados = todos.filter(p => {
@@ -1312,7 +1383,8 @@ function bindSheetSenha() {
       localStorage.setItem('nx2_users', JSON.stringify(users));
       // Atualizar sessão
       const session = { ...currentUser, senha: nova };
-      localStorage.setItem('nx2_session', JSON.stringify(session));
+      // sessão por aba — sessionStorage
+      sessionStorage.setItem('nx2_session', JSON.stringify(session));
       currentUser = session;
       // Limpar campos
       ['senha-atual','senha-nova','senha-confirma'].forEach(id => document.getElementById(id).value = '');
@@ -1320,6 +1392,59 @@ function bindSheetSenha() {
       showToast('Senha atualizada com sucesso!');
     } catch(e) { errEl.textContent = e.message; }
   });
+}
+
+
+// ── GPS: MAPA DE LOCALIZAÇÃO ──
+
+let _mapaLeaflet = null;
+
+function abrirMapaUsuario(lat, lng) {
+  openSheet('mapa');
+  setTimeout(() => {
+    const container = document.getElementById('mapa-leaflet');
+    if (!container) return;
+    if (_mapaLeaflet) {
+      _mapaLeaflet.setView([lat, lng], 13);
+    } else {
+      _mapaLeaflet = L.map('mapa-leaflet').setView([lat, lng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>'
+      }).addTo(_mapaLeaflet);
+    }
+    // Limpar marcadores
+    _mapaLeaflet.eachLayer(layer => {
+      if (layer instanceof L.Marker) _mapaLeaflet.removeLayer(layer);
+    });
+    // Marcador do usuário
+    const iconUser = L.divIcon({
+      className: '',
+      html: '<div style="width:18px;height:18px;background:#2dd4a0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 5px rgba(45,212,160,0.25);"></div>',
+      iconSize: [18,18], iconAnchor: [9,9]
+    });
+    L.marker([lat, lng], { icon: iconUser })
+      .addTo(_mapaLeaflet)
+      .bindPopup('<b>📍 Você está aqui</b>')
+      .openPopup();
+    // Marcadores dos prestadores
+    authManager.listarPrestadores().forEach(async p => {
+      if (!p.cidade) return;
+      const coords = await coordenadasDePrestador(p);
+      if (!coords) return;
+      const km = haversineKm(lat, lng, coords.lat, coords.lng);
+      const cor = km <= RAIO_KM ? '#2dd4a0' : '#5b8dee';
+      const iconP = L.divIcon({
+        className: '',
+        html: `<div style="background:${cor};color:#000;font-size:10px;font-weight:800;padding:4px 8px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.35);">${p.nomeNegocio||p.nome}</div>`,
+        iconAnchor: [40,20]
+      });
+      L.marker([coords.lat, coords.lng], { icon: iconP })
+        .addTo(_mapaLeaflet)
+        .bindPopup(`<b>${p.nomeNegocio||p.nome}</b><br>${p.cidade}${p.estado?', '+p.estado:''}<br><b>${km.toFixed(1)} km</b> de você`);
+    });
+    setTimeout(() => _mapaLeaflet.invalidateSize(), 300);
+  }, 150);
 }
 
 

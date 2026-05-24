@@ -1,146 +1,149 @@
-# 📅 Nextime
+# Nextime — Agendamento de Serviços
 
-> **Agendamentos simples. Clientes satisfeitos.**
-
-Aplicativo mobile de agendamento de serviços com gestão de clientes, desenvolvido com **Apache Cordova** para a disciplina de Desenvolvimento Mobile — Unieuro 2025.
-
----
-
-## 📋 Descrição
-
-O **Nextime** conecta **clientes** e **prestadores de serviço** em uma plataforma unificada de agendamento. Clientes encontram prestadores e agendam horários; prestadores gerenciam sua agenda, serviços e se comunicam com os clientes via chat integrado.
-
-O app funciona inteiramente no navegador (plataforma `browser` do Cordova), persistindo os dados via `localStorage`, sem necessidade de backend.
+> **Disciplina:** Desenvolvimento Mobile — Unieuro 2025
+> **Professor:** Dr. Aldo Henrique
+> **Projeto:** Projeto 2 — APIs Públicas e Recursos Nativos
 
 ---
 
-## ✨ Funcionalidades
+## Sobre o Aplicativo
 
-### 👤 Perfil Cliente
-- Cadastro com CPF, foto de perfil (câmera ou galeria) e endereço via CEP
-- Busca de prestadores disponíveis
-- Agendamento de serviços com seleção de data, hora e observação
-- Acompanhamento de status dos agendamentos (pendente, confirmado, concluído, cancelado, recusado)
-- Chat por agendamento com o prestador
-- Calendário mensal com navegação
+O **Nextime** é um aplicativo mobile de agendamento de serviços que conecta clientes a prestadores de serviço. Prestadores cadastram serviços, gerenciam agenda e se comunicam via chat. Clientes exploram prestadores, filtram por localização, agendamento e acompanham reservas.
 
-### 🔧 Perfil Prestador
-- Cadastro com CNPJ (validado via Receita Federal), foto e endereço
-- Gestão de serviços (nome, duração, preço, descrição)
-- Painel de agendamentos com filtros por status e data
-- Confirmação, recusa ou conclusão de agendamentos
-- Chat por agendamento com o cliente
-- Visualização de feriados nacionais no calendário
-
-### 🌐 APIs Integradas
-
-| API | Finalidade | Fonte |
-|-----|-----------|-------|
-| **IBGE** | Lista de municípios brasileiros | dados.gov.br |
-| **ViaCEP** | Preenchimento automático de endereço por CEP | viacep.com.br |
-| **BrasilAPI — CNPJ** | Validação e dados cadastrais de empresas (Receita Federal) | brasilapi.com.br |
-| **BrasilAPI — Feriados** | Feriados nacionais para o calendário | brasilapi.com.br |
-| **DiceBear** | Geração automática de avatar por iniciais do nome | dicebear.com |
+**Slogan:** _Agendamentos simples. Clientes satisfeitos._
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## Tecnologias
+
+| Tecnologia | Versão | Uso |
+|---|---|---|
+| Apache Cordova | 12.x | Empacotamento Android/iOS |
+| Framework7 | integrado | Integração nativa (back button, teclado, splash) |
+| Leaflet.js | 1.9.4 | Mapa interativo OpenStreetMap (GPS) |
+| JavaScript ES6+ | — | Lógica da aplicação |
+| localStorage | Web API | Persistência e cache de APIs |
+| cordova-plugin-camera | ^7.0.0 | Câmera e galeria |
+
+---
+
+## APIs Integradas
+
+### 1. IBGE — Municípios ⭐ `dados.gov.br` (OBRIGATÓRIA)
+**Endpoint:** `https://servicodados.ibge.gov.br/api/v1/localidades/municipios/{codigo}`
+**Uso:** enriquece o resultado do ViaCEP com microrregião e mesorregião do município.
+
+### 2. ViaCEP (brasileira)
+**Endpoint:** `https://viacep.com.br/ws/{cep}/json/`
+**Uso:** preenche automaticamente cidade/bairro/estado no cadastro. Loading spinner durante busca.
+
+### 3. BrasilAPI CNPJ — Receita Federal (brasileira/governamental)
+**Endpoint:** `https://brasilapi.com.br/api/cnpj/v1/{cnpj}`
+**Uso:** valida CNPJ na Receita Federal, preenche razão social. Loading spinner durante consulta.
+
+### 4. BrasilAPI Feriados (brasileira)
+**Endpoint:** `https://brasilapi.com.br/api/feriados/v1/{ano}`
+**Uso:** feriados nacionais no calendário do prestador (ponto amarelo nos dias).
+
+### 5. DiceBear Avatars (internacional)
+**Endpoint:** `https://api.dicebear.com/9.x/initials/svg?seed={nome}`
+**Uso:** avatares automáticos com iniciais para usuários sem foto.
+
+### 6. OpenStreetMap / Nominatim (GPS)
+**Endpoint:** `https://nominatim.openstreetmap.org/search?q={cidade,uf}&format=json`
+**Uso:** geocodifica cidades dos prestadores para cálculo de distância (Haversine) e exibição no mapa Leaflet.
+
+---
+
+## Recursos Nativos
+
+### Câmera (`cordova-plugin-camera`)
+- Foto de perfil via câmera frontal ou galeria
+- Acesso: aba Perfil → botão Editar → Câmera / Galeria
+
+### GPS (Geolocalização nativa)
+- Botão "Perto de mim" na tela Explorar
+- Usa `navigator.geolocation.getCurrentPosition()`
+- Abre mapa interativo (Leaflet + OpenStreetMap) com marcador do usuário e marcadores dos prestadores
+- Filtra prestadores num raio de 10 km com cálculo Haversine
+- Badge de distância em km em cada card de prestador
+
+---
+
+## Persistência
+
+Todos os dados e cache de APIs são salvos no `localStorage`:
+
+| Chave | Conteúdo | TTL |
+|---|---|---|
+| `nx2_users` | Usuários cadastrados | Permanente |
+| `nx2_session` | Sessão atual | Permanente |
+| `nx2_appointments` | Agendamentos | Permanente |
+| `nx2_services_{id}` | Serviços do prestador | Permanente |
+| `nx2_chat_{aptId}` | Mensagens do chat | Permanente |
+| `nx2_cache_ibge_municipio_{cod}` | Cache IBGE | 24h |
+| `nx2_cache_viacep_{cep}` | Cache ViaCEP | 24h |
+| `nx2_cache_brasilapi_cnpj_{cnpj}` | Cache CNPJ | 24h |
+| `nx2_cache_feriados_{ano}` | Cache feriados | 24h |
+
+---
+
+## Estrutura do Projeto
 
 ```
 nextime-mobile/
-├── config.xml              # Configuração Cordova (ID, versão, plugins)
-├── package.json            # Dependências e scripts npm
-├── www/                    # Código-fonte da aplicação
-│   ├── index.html          # Estrutura HTML principal (todas as telas)
-│   ├── css/
-│   │   └── app.css         # Estilos globais (tema escuro, componentes)
-│   └── js/
-│       ├── model.js        # Classes de dados: User, Service, Appointment, ChatMessage
-│       ├── manager.js      # Lógica de negócio: AuthManager, ServiceManager,
-│       │                   # AppointmentManager, ChatManager
-│       ├── api-service.js  # Integração com APIs externas (IBGE, ViaCEP, BrasilAPI, DiceBear)
-│       ├── app.js          # Controlador principal: navegação, eventos, renderização
-│       └── cordova-app.js  # Inicialização Cordova (câmera, deviceready)
-├── plugins/
-│   └── cordova-plugin-camera/   # Plugin de câmera/galeria
-└── platforms/
-    └── browser/            # Build para plataforma browser
+├── config.xml
+├── package.json
+├── README.md
+└── www/
+    ├── index.html
+    ├── css/
+    │   └── app.css
+    └── js/
+        ├── app.js          ← Lógica principal
+        ├── api-service.js  ← Chamadas a APIs externas
+        ├── manager.js      ← Gerenciadores de dados
+        └── model.js        ← Modelos (User, Service, Appointment...)
 ```
 
 ---
 
-## 🚀 Como Executar
-
-### Pré-requisitos
-
-- [Node.js](https://nodejs.org/) (v14 ou superior)
-- [Apache Cordova](https://cordova.apache.org/) (v13)
+## Como Rodar
 
 ```bash
-npm install -g cordova
-```
-
-### Instalação
-
-```bash
-# 1. Clone o repositório
-git clone https://github.com/seuusuario/nextime-mobile.git
-cd nextime-mobile
-
-# 2. Instale as dependências
 npm install
+npm start              # browser
+cordova run browser    # browser via Cordova
 
-# 3. Execute no browser
-npm start
-# ou
-cordova run browser
+# Android
+cordova platform add android
+cordova build android
+# APK: platforms/android/app/build/outputs/apk/debug/
 ```
 
-O aplicativo abrirá automaticamente em `http://localhost:8000`.
-
 ---
 
-## 🧩 Arquitetura
+## Checklist das Entregas
 
-O projeto segue uma arquitetura **MVC simplificada**, sem frameworks externos:
+### Entrega 1 ✅
+- [x] Projeto Cordova criado e configurado
+- [x] Framework7 configurado
+- [x] README criado
+- [x] Estrutura organizada em arquivos separados
+- [x] API 1 (IBGE/dados.gov.br) funcionando
+- [x] API 2 (ViaCEP) funcionando
+- [x] Plugins instalados
 
-- **Model** (`model.js`): Classes `User`, `Service`, `Appointment` e `ChatMessage` com geração automática de IDs únicos.
-- **Manager** (`manager.js`): Camada de negócio que lê e persiste dados no `localStorage`. Classes `AuthManager`, `ServiceManager`, `AppointmentManager` e `ChatManager`.
-- **View + Controller** (`index.html` + `app.js`): Renderização dinâmica de componentes e gerenciamento de eventos do usuário.
-- **Serviços** (`api-service.js`): Módulo isolado de chamadas às APIs externas, com cache local de 24h via `localStorage`.
+### Entrega 2 ✅
+- [x] APIs integradas na interface com loading visual (spinners animados)
+- [x] Tratamento de erros com mensagens ao usuário
+- [x] GPS funcionando: mapa Leaflet + marcadores de prestadores
+- [x] Câmera funcionando: foto de perfil
+- [x] Cache/persistência via localStorage
+- [x] Navegação funcional entre todas as telas
 
----
-
-## 📦 Dependências
-
-| Pacote | Versão | Uso |
-|--------|--------|-----|
-| `cordova` | ^13.0.0 | Framework mobile |
-| `cordova-browser` | ^7.0.0 | Plataforma browser |
-| `cordova-plugin-camera` | ^7.0.0 | Acesso à câmera e galeria |
-
-**Fontes externas (CDN):**
-- Google Fonts — `Syne` e `DM Sans`
-- Google Material Icons Round
-
----
-
-## 🎨 Design
-
-- Tema escuro com fundo `#0a0a0f`
-- Tipografia principal: **Syne** (títulos) e **DM Sans** (corpo)
-- Sistema de sheets (bottom sheets) para formulários e detalhes
-- Componentes: badges de status coloridos, avatares gerados automaticamente, toast de notificações, tabs de navegação
-
----
-
-## 👥 Autores
-
-**Lucas e Parceiro** — Unieuro 2025
-Disciplina: Desenvolvimento Mobile
-
----
-
-## 📄 Licença
-
-Este projeto está licenciado sob a licença **MIT**. Consulte o arquivo `LICENSE` para mais detalhes.
+### Entrega 3 ✅
+- [x] Aplicativo funcional e estável
+- [x] Todas as funcionalidades integradas
+- [x] README.md final atualizado
+- [x] Build Android pronto (`cordova build android`)

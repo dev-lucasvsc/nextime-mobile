@@ -48,7 +48,7 @@ class AuthManager {
     const session = this.getUsuarioAtual();
     if (session && session.id === userId) {
       session.foto = fotoBase64;
-      localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+      sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
     }
     return users[idx];
   }
@@ -56,11 +56,12 @@ class AuthManager {
   login(email, senha) {
     const user = this._getUsers().find(u => u.email === email.toLowerCase().trim() && u.senha === senha);
     if (!user) throw new Error('E-mail ou senha inválidos.');
-    localStorage.setItem(this.SESSION_KEY, JSON.stringify(user));
+    // sessionStorage: isolado por aba — cada aba tem sua própria sessão
+    sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(user));
     return user;
   }
 
-  logout()           { localStorage.removeItem(this.SESSION_KEY); }
+  logout()           { sessionStorage.removeItem(this.SESSION_KEY); }
 
   atualizarPerfil(userId, campos) {
     const users = this._getUsers();
@@ -71,11 +72,11 @@ class AuthManager {
     // atualizar sessão também
     const session = this.getUsuarioAtual();
     if (session && session.id === userId) {
-      localStorage.setItem(this.SESSION_KEY, JSON.stringify(users[idx]));
+      sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(users[idx]));
     }
     return users[idx];
   }
-  getUsuarioAtual()  { return JSON.parse(localStorage.getItem(this.SESSION_KEY) || 'null'); }
+  getUsuarioAtual()  { return JSON.parse(sessionStorage.getItem(this.SESSION_KEY) || 'null'); }
   estaLogado()       { return !!this.getUsuarioAtual(); }
 
   listarPrestadores() {

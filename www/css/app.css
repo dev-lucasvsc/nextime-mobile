@@ -1399,3 +1399,108 @@ select.nx-input {
   color: var(--nx-red, #ff4d6d);
   border-color: var(--nx-red, #ff4d6d);
 }
+
+/* ═══════════════════════════════════════════
+   LOADING STATES — Entrega 2
+   ═══════════════════════════════════════════ */
+
+/* Spinner inline (pequeno, junto ao texto) */
+@keyframes nx-spin { to { transform: rotate(360deg); } }
+
+.api-spinner {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: nx-spin 0.65s linear infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.api-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Bloco de loading para lista */
+.api-loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Loading inline mini (strips) */
+.api-loading-inline {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* field-hint upgrade */
+.field-hint {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 4px 0;
+  min-height: 20px;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+/* ═══════════════════════════════════════════
+   MAPA GPS — Sheet estilo Nextime
+   ═══════════════════════════════════════════ */
+
+#sheet-mapa {
+  display: none;
+  flex-direction: column;
+  padding: 0;
+}
+#sheet-mapa.open { display: flex; }
+#sheet-mapa .nx-sheet-body { padding: 0; flex: 1; }
+
+/* Leaflet overrides para dark mode */
+.leaflet-container {
+  background: #111118;
+  font-family: var(--font-body);
+}
+.leaflet-popup-content-wrapper {
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 12px;
+  border: 1px solid var(--border-mid);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.leaflet-popup-tip { background: var(--surface-2); }
+.leaflet-popup-content { margin: 10px 14px; font-size: 13px; line-height: 1.5; }
+.leaflet-control-attribution {
+  background: rgba(17,17,24,0.8) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+}
+.leaflet-control-zoom a {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-color: var(--border-mid) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--surface-3) !important;
+}
+
+/* Botão GPS ativo */
+#filtro-proximidade.active {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+}
