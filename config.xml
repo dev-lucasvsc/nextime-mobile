@@ -5,15 +5,9 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
     <name>Nextime</name>
-<<<<<<< HEAD
     <description>Aplicativo de agendamento de serviços com gestão de clientes e prestadores.</description>
     <author email="dev.lucasvasconcelos@gmail.com" href="https://github.com/dev-lucasvsc">
-        Lucas Vasconcelos — joao Gabriel | Unieuro 2026
-=======
-    <description>Aplicativo de agendamento de serviços com gestão de clientes.</description>
-    <author email="dev.lucasvasconcelos@gmail.com" href="https://github.com/dev-lucasvsc">
-        Lucas e Joâo — Unieuro 2026
->>>>>>> 56b326e6d1a30812e584ecbe30ac112f60d602f3
+        Lucas Vasconcelos — Joao Gabriel | Unieuro 2026
     </author>
 
     <!-- Ponto de entrada do app -->
@@ -28,6 +22,9 @@
     <!-- Plugins instalados -->
     <plugin name="cordova-plugin-camera" spec="^7.0.0" />
 
+    <!-- ═══════════════════════════════════════
+         PERMISSÕES ANDROID
+         ═══════════════════════════════════════ -->
     <platform name="android">
 
         <!-- Câmera e galeria -->
@@ -60,6 +57,9 @@
 
     </platform>
 
+    <!-- ═══════════════════════════════════════
+         PERMISSÕES iOS
+         ═══════════════════════════════════════ -->
     <platform name="ios">
         <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
             <string>O Nextime usa a câmera para foto de perfil.</string>
@@ -72,9 +72,17 @@
         </config-file>
     </platform>
 
+    <!-- ═══════════════════════════════════════
+         PLATAFORMA BROWSER (desenvolvimento)
+         ═══════════════════════════════════════ -->
     <platform name="browser">
         <allow-navigation href="*" />
     </platform>
+
+    <!-- ═══════════════════════════════════════
+         HOOKS — sincronização docs/ → www/
+         ═══════════════════════════════════════ -->
+    <hook type="before_prepare" src="hooks/before_prepare/copy_docs_to_www.js" />
 
     <!-- Preferências gerais -->
     <preference name="DisallowOverscroll" value="true" />
