@@ -1,15 +1,79 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="br.com.nextime.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="br.com.nextime.app" version="1.0.0"
+        xmlns="http://www.w3.org/ns/widgets"
+        xmlns:cdv="http://cordova.apache.org/ns/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android">
+
     <name>Nextime</name>
-    <description>Aplicativo de agendamento de serviços com gestão de clientes.</description>
-    <author email="aluno@unieuro.edu.br" href="https://github.com/seuusuario">
-        Lucas e Parceiro — Unieuro 2025
+    <description>Aplicativo de agendamento de serviços com gestão de clientes e prestadores.</description>
+    <author email="dev.lucasvasconcelos@gmail.com" href="https://github.com/dev-lucasvsc">
+        Lucas Vasconcelos — joao Gabriel | Unieuro 2026
     </author>
+
+    <!-- Ponto de entrada do app -->
     <content src="index.html" />
+
+    <!-- Acesso a APIs externas -->
+    <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
+    <allow-navigation href="*" />
+
+    <!-- Plugins instalados -->
     <plugin name="cordova-plugin-camera" spec="^7.0.0" />
+
+    <platform name="android">
+
+        <!-- Câmera e galeria -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-feature android:name="android.hardware.camera" android:required="false" />
+            <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+        </config-file>
+
+        <!-- GPS / Geolocalização -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+        </config-file>
+
+        <!-- Internet (APIs públicas) -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.INTERNET" />
+        </config-file>
+
+        <!-- Configurações visuais Android -->
+        <preference name="android-minSdkVersion" value="24" />
+        <preference name="android-targetSdkVersion" value="34" />
+
+        <!-- Ícone e splash (se houver) -->
+        <!-- <icon src="www/img/logo.png" /> -->
+        <!-- <splash src="www/img/splash.png" /> -->
+
+    </platform>
+
+    <platform name="ios">
+        <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
+            <string>O Nextime usa a câmera para foto de perfil.</string>
+        </config-file>
+        <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
+            <string>O Nextime acessa a galeria para foto de perfil.</string>
+        </config-file>
+        <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
+            <string>O Nextime usa sua localização para encontrar prestadores próximos.</string>
+        </config-file>
+    </platform>
+
     <platform name="browser">
         <allow-navigation href="*" />
     </platform>
+
+    <!-- Preferências gerais -->
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackgroundColor" value="0xff07090f" />
+    <preference name="StatusBarOverlaysWebView" value="false" />
+    <preference name="StatusBarStyle" value="lightcontent" />
+
 </widget>
