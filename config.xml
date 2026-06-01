@@ -5,9 +5,15 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
     <name>Nextime</name>
+<<<<<<< HEAD
     <description>Aplicativo de agendamento de serviços com gestão de clientes e prestadores.</description>
     <author email="dev.lucasvasconcelos@gmail.com" href="https://github.com/dev-lucasvsc">
         Lucas Vasconcelos — joao Gabriel | Unieuro 2026
+=======
+    <description>Aplicativo de agendamento de serviços com gestão de clientes.</description>
+    <author email="dev.lucasvasconcelos@gmail.com" href="https://github.com/dev-lucasvsc">
+        Lucas e Joâo — Unieuro 2026
+>>>>>>> 56b326e6d1a30812e584ecbe30ac112f60d602f3
     </author>
 
     <!-- Ponto de entrada do app -->
