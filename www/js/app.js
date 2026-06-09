@@ -1,3 +1,21 @@
+// ── Ícone dinâmico por nome do serviço ──
+function _iconePorServico(nome) {
+  const n = (nome || '').toLowerCase();
+  if (n.includes('cabelo') || n.includes('corte') || n.includes('barba') || n.includes('barbearia')) return '💈';
+  if (n.includes('musculação') || n.includes('academia') || n.includes('treino') || n.includes('personal')) return '🏋️';
+  if (n.includes('unhas') || n.includes('manicure') || n.includes('pedicure')) return '💅';
+  if (n.includes('massage') || n.includes('massagem')) return '💆';
+  if (n.includes('estetica') || n.includes('estética') || n.includes('skincare') || n.includes('facial')) return '✨';
+  if (n.includes('maquiagem') || n.includes('makeup')) return '💄';
+  if (n.includes('yoga') || n.includes('pilates')) return '🧘';
+  if (n.includes('dentist') || n.includes('odonto')) return '🦷';
+  if (n.includes('consult') || n.includes('médico') || n.includes('medico')) return '🩺';
+  if (n.includes('aula') || n.includes('curso') || n.includes('ensino')) return '📚';
+  if (n.includes('limpeza') || n.includes('faxina')) return '🧹';
+  if (n.includes('pet') || n.includes('cão') || n.includes('gato') || n.includes('banho')) return '🐾';
+  return '⚡';
+}
+
 const authManager = new AuthManager();
 const aptManager  = new AppointmentManager();
 const chatManager = new ChatManager();
@@ -69,6 +87,8 @@ function closeSheet(name) {
 
 function initTabs(barId) {
   const bar = document.getElementById(barId);
+  if (bar.dataset.initialized) return;
+  bar.dataset.initialized = 'true';
   bar.querySelectorAll('.nx-tab-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       bar.querySelectorAll('.nx-tab-btn').forEach(b => b.classList.remove('active'));
@@ -262,6 +282,14 @@ function atualizarCamposCadastro(isCad) {
     const ph  = document.getElementById('auth-foto-placeholder');
     if (img) img.style.display = 'none';
     if (ph)  ph.style.display  = 'block';
+    // Limpar e ocultar campos de endereço/cadastro ao voltar para login
+    ['auth-cep','auth-cep-status','auth-cidade','auth-bairro','auth-estado',
+     'auth-nome','auth-negocio','auth-razao','auth-fantasia','auth-cpf','auth-cnpj','auth-cnpj-status'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; el.value = ''; }
+    });
+    const pfw = document.getElementById('perfil-wrap');
+    if (pfw) pfw.style.display = 'none';
   }
 }
 
@@ -613,7 +641,7 @@ function renderServicosPrestador() {
     const li = document.createElement('li');
     li.className = 'nx-list-item';
     li.innerHTML = `
-      <div style="width:44px;height:44px;border-radius:12px;background:var(--nx-accent-dim);border:1px solid rgba(0,212,170,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✂️</div>
+      <div style="width:44px;height:44px;border-radius:12px;background:var(--nx-accent-dim);border:1px solid rgba(0,212,170,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${_iconePorServico(s.nome)}</div>
       <div class="nx-list-item-info">
         <div class="nx-list-item-title">${s.nome}</div>
         <div class="nx-list-item-sub">${s.duracao} min${s.descricao?' · '+s.descricao:''}</div>
@@ -1030,8 +1058,9 @@ async function renderPrestadores() {
   }
 
   if (countEl) countEl.textContent = filtrados.length > 0 ? `${filtrados.length} resultado${filtrados.length>1?'s':''}` : '';
-  if (filtrados.length===0) { emptyEl.style.display='block'; return; }
+  if (filtrados.length===0) { listaEl.innerHTML = ''; emptyEl.style.display='block'; return; }
   emptyEl.style.display='none';
+  listaEl.innerHTML = ''; // limpar spinner antes de inserir cards
 
   filtrados.forEach(p => {
     const svcs = ServiceManager.listarDePrestador(p.id);

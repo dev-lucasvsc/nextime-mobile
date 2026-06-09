@@ -13,6 +13,9 @@
     <!-- Ponto de entrada do app -->
     <content src="index.html" />
 
+    <!-- Ícone padrão -->
+    <icon src="www/img/icons/icon_512.png" />
+
     <!-- Acesso a APIs externas -->
     <access origin="*" />
     <allow-intent href="http://*/*" />
@@ -21,17 +24,24 @@
 
     <!-- Plugins instalados -->
     <plugin name="cordova-plugin-camera" spec="^7.0.0" />
+    <plugin name="cordova-plugin-local-notification" spec="^0.9.0-beta.3" />
 
     <!-- ═══════════════════════════════════════
          PERMISSÕES ANDROID
          ═══════════════════════════════════════ -->
     <platform name="android">
 
+        <!-- Ícones do app -->
+        <icon src="www/img/icons/icon_36.png"  density="ldpi"    />
+        <icon src="www/img/icons/icon_48.png"  density="mdpi"    />
+        <icon src="www/img/icons/icon_72.png"  density="hdpi"    />
+        <icon src="www/img/icons/icon_96.png"  density="xhdpi"   />
+        <icon src="www/img/icons/icon_144.png" density="xxhdpi"  />
+        <icon src="www/img/icons/icon_192.png" density="xxxhdpi" />
+
         <!-- Câmera e galeria -->
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.CAMERA" />
-            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
             <uses-feature android:name="android.hardware.camera" android:required="false" />
             <uses-feature android:name="android.hardware.camera.front" android:required="false" />
         </config-file>
@@ -42,6 +52,13 @@
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
         </config-file>
 
+        <!-- Notificações locais (Android 13+) -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+            <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+        </config-file>
+
         <!-- Internet (APIs públicas) -->
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -49,7 +66,8 @@
 
         <!-- Configurações visuais Android -->
         <preference name="android-minSdkVersion" value="24" />
-        <preference name="android-targetSdkVersion" value="34" />
+        <preference name="android-targetSdkVersion" value="36" />
+        <preference name="android-compileSdkVersion" value="36" />
 
         <!-- Ícone e splash (se houver) -->
         <!-- <icon src="www/img/logo.png" /> -->
@@ -86,7 +104,7 @@
 
     <!-- Preferências gerais -->
     <preference name="DisallowOverscroll" value="true" />
-    <preference name="BackgroundColor" value="0xff07090f" />
+    <preference name="BackgroundColor" value="#ff07090f" />
     <preference name="StatusBarOverlaysWebView" value="false" />
     <preference name="StatusBarStyle" value="lightcontent" />
 

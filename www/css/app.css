@@ -356,8 +356,8 @@ select.nx-input {
   bottom: 0;
   left: 0;
   right: 0;
-  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: calc(var(--tabbar-h) + max(env(safe-area-inset-bottom, 0px), 20px));
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
@@ -413,14 +413,13 @@ select.nx-input {
   flex-direction: column;
   position: fixed;
   inset: 0;
-  bottom: var(--tabbar-h);
+  bottom: calc(var(--tabbar-h) + max(env(safe-area-inset-bottom, 0px), 20px));
 }
 .nx-tab.active { display: flex; }
 
 /* ── Topbar ─────────────────────────────────────────────── */
 .nx-topbar {
   height: var(--topbar-h);
-  padding-top: env(safe-area-inset-top, 0);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -437,6 +436,37 @@ select.nx-input {
   letter-spacing: -0.3px;
   color: var(--text);
 }
+/* Wordmark inline no topbar */
+.nx-wordmark {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  line-height: 1;
+}
+.nx-wm-next {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+.nx-wm-ime {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -1px;
+  color: var(--accent);
+}
+.nx-wm-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 2px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
 /* O wordmark da tela inicial da app */
 .nx-topbar-title[id="topbar-title-p"],
 .nx-topbar .nx-topbar-title:first-child:not(:only-child) {
@@ -741,6 +771,17 @@ select.nx-input {
   font-size: 18px !important;
   color: var(--text-dim);
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Texto direto em nx-list-item não quebra linha */
+.nx-list-item > span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 /* Info list (perfil) */

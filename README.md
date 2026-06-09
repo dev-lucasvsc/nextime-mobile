@@ -18,12 +18,12 @@ O **Nextime** é um aplicativo mobile de agendamento de serviços que conecta cl
 
 | Tecnologia | Versão | Uso |
 |---|---|---|
-| Apache Cordova | 12.x | Empacotamento Android/iOS |
-| Framework7 | integrado | Integração nativa (back button, teclado, splash) |
+| Apache Cordova | 12.x | Empacotamento Android |
 | Leaflet.js | 1.9.4 | Mapa interativo OpenStreetMap (GPS) |
 | JavaScript ES6+ | — | Lógica da aplicação |
 | localStorage | Web API | Persistência e cache de APIs |
 | cordova-plugin-camera | ^7.0.0 | Câmera e galeria |
+| cordova-plugin-local-notification | ^0.9.0-beta.3 | Notificações locais Android |
 
 ---
 
@@ -35,15 +35,15 @@ O **Nextime** é um aplicativo mobile de agendamento de serviços que conecta cl
 
 ### 2. ViaCEP (brasileira)
 **Endpoint:** `https://viacep.com.br/ws/{cep}/json/`
-**Uso:** preenche automaticamente cidade/bairro/estado no cadastro. Loading spinner durante busca.
+**Uso:** preenche automaticamente cidade/bairro/estado no cadastro.
 
 ### 3. BrasilAPI CNPJ — Receita Federal (brasileira/governamental)
 **Endpoint:** `https://brasilapi.com.br/api/cnpj/v1/{cnpj}`
-**Uso:** valida CNPJ na Receita Federal, preenche razão social. Loading spinner durante consulta.
+**Uso:** valida CNPJ na Receita Federal e preenche razão social.
 
 ### 4. BrasilAPI Feriados (brasileira)
 **Endpoint:** `https://brasilapi.com.br/api/feriados/v1/{ano}`
-**Uso:** feriados nacionais no calendário do prestador (ponto amarelo nos dias).
+**Uso:** feriados nacionais no calendário do prestador.
 
 ### 5. DiceBear Avatars (internacional)
 **Endpoint:** `https://api.dicebear.com/9.x/initials/svg?seed={nome}`
@@ -51,7 +51,7 @@ O **Nextime** é um aplicativo mobile de agendamento de serviços que conecta cl
 
 ### 6. OpenStreetMap / Nominatim (GPS)
 **Endpoint:** `https://nominatim.openstreetmap.org/search?q={cidade,uf}&format=json`
-**Uso:** geocodifica cidades dos prestadores para cálculo de distância (Haversine) e exibição no mapa Leaflet.
+**Uso:** geocodifica cidades dos prestadores para distância (Haversine) e mapa Leaflet.
 
 ---
 
@@ -64,27 +64,13 @@ O **Nextime** é um aplicativo mobile de agendamento de serviços que conecta cl
 ### GPS (Geolocalização nativa)
 - Botão "Perto de mim" na tela Explorar
 - Usa `navigator.geolocation.getCurrentPosition()`
-- Abre mapa interativo (Leaflet + OpenStreetMap) com marcador do usuário e marcadores dos prestadores
+- Abre mapa interativo (Leaflet + OpenStreetMap)
 - Filtra prestadores num raio de 10 km com cálculo Haversine
-- Badge de distância em km em cada card de prestador
 
----
-
-## Persistência
-
-Todos os dados e cache de APIs são salvos no `localStorage`:
-
-| Chave | Conteúdo | TTL |
-|---|---|---|
-| `nx2_users` | Usuários cadastrados | Permanente |
-| `nx2_session` | Sessão atual | Permanente |
-| `nx2_appointments` | Agendamentos | Permanente |
-| `nx2_services_{id}` | Serviços do prestador | Permanente |
-| `nx2_chat_{aptId}` | Mensagens do chat | Permanente |
-| `nx2_cache_ibge_municipio_{cod}` | Cache IBGE | 24h |
-| `nx2_cache_viacep_{cep}` | Cache ViaCEP | 24h |
-| `nx2_cache_brasilapi_cnpj_{cnpj}` | Cache CNPJ | 24h |
-| `nx2_cache_feriados_{ano}` | Cache feriados | 24h |
+### Notificações Locais (`cordova-plugin-local-notification`)
+- Arquivo `www/js/notificacoes.js`
+- Notificação automática ao confirmar/recusar agendamentos
+- Botões "Permitir notificações" e "Enviar notificação de teste" na aba Perfil
 
 ---
 
@@ -95,31 +81,175 @@ nextime-mobile/
 ├── config.xml
 ├── package.json
 ├── README.md
+├── plugins/
+│   ├── cordova-plugin-camera/
+│   ├── cordova-plugin-local-notification/
+│   └── cordova-plugin-device/
 └── www/
     ├── index.html
+    ├── cordova_plugins.js       ← registro dos plugins no runtime
     ├── css/
     │   └── app.css
-    └── js/
-        ├── app.js          ← Lógica principal
-        ├── api-service.js  ← Chamadas a APIs externas
-        ├── manager.js      ← Gerenciadores de dados
-        └── model.js        ← Modelos (User, Service, Appointment...)
+    ├── js/
+    │   ├── app.js               ← lógica principal
+    │   ├── api-service.js       ← chamadas a APIs externas
+    │   ├── manager.js           ← gerenciadores de dados
+    │   ├── model.js             ← modelos (User, Service, Appointment)
+    │   ├── notificacoes.js      ← notificações locais
+    │   └── sync.js              ← sincronização Supabase
+    └── plugins/
+        └── cordova-plugin-local-notification/
+            └── www/
+                └── local-notification.js  ← plugin carregado pelo Cordova runtime
 ```
 
 ---
 
-## Como Rodar
+## Pré-requisitos
 
+Instale e configure tudo abaixo **uma única vez** antes de buildar.
+
+### 1. JDK 17
+- Baixar: https://www.oracle.com/java/technologies/downloads/#java17
+- Instalar normalmente no Windows
+- Caminho padrão após instalar: `C:\Program Files\Java\jdk-17`
+
+### 2. Android Studio + SDK
+- Baixar: https://developer.android.com/studio
+- Durante a instalação, marcar **Android SDK** para ser instalado junto
+- Após abrir o Android Studio: **More Actions → SDK Manager**
+  - Aba **SDK Platforms**: instalar **Android 14 (API 36)**
+  - Aba **SDK Tools**: instalar **Android SDK Build-Tools 36.0.0** e **Android SDK Platform-Tools**
+- Caminho padrão do SDK: `C:\Users\SEU_USUARIO\AppData\Local\Android\sdk`
+
+### 3. Gradle 8.14.2
+- Baixar: https://gradle.org/releases/ → `gradle-8.14.2-bin.zip`
+- Extrair para `D:\Download\` (ou qualquer pasta fixa)
+- A estrutura deve ficar: `D:\Download\gradle-8.14.2\bin\gradle.bat`
+
+> **Atenção:** o Gradle 9.x não é compatível com o `cordova-android` 15. Use o 8.14.2.
+
+### 4. Node.js + Cordova
 ```bash
-npm install
-npm start              # browser
-cordova run browser    # browser via Cordova
-
-# Android
-cordova platform add android
-cordova build android
-# APK: platforms/android/app/build/outputs/apk/debug/
+# instalar Node.js LTS: https://nodejs.org
+npm install -g cordova
 ```
+
+---
+
+## Como Rodar (Android)
+
+### A. Configurar variáveis de ambiente (fazer toda vez que abrir o terminal)
+
+Abra o **PowerShell** na pasta do projeto e execute:
+
+```powershell
+$env:JAVA_HOME    = "C:\Program Files\Java\jdk-17"
+$env:ANDROID_HOME = "C:\Users\SEU_USUARIO\AppData\Local\Android\sdk"
+$env:Path         = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;D:\Download\gradle-8.14.2\bin;$env:Path"
+```
+
+> Substitua `SEU_USUARIO` pelo seu nome de usuário do Windows (ex: `Lucas`).
+
+### B. Instalar dependências (só na primeira vez)
+
+```powershell
+npm install
+```
+
+### C. Verificar se o ambiente está ok
+
+```powershell
+npx cordova requirements android
+```
+
+Deve mostrar todos os requisitos como `installed` ou `ok`.
+
+### D. Gerar o APK
+
+```powershell
+npm run android
+```
+
+O APK gerado fica em:
+```
+platforms\android\app\build\outputs\apk\debug\app-debug.apk
+```
+
+---
+
+## Como Instalar no Celular
+
+### Opção 1: Pelo cabo USB (recomendado para desenvolvimento)
+
+1. No celular, ative **Opções do desenvolvedor**:
+   - Configurações → Sobre o telefone → toque **7 vezes** em "Número da versão"
+2. Ative **Depuração USB**:
+   - Configurações → Sistema → Opções do desenvolvedor → Depuração USB
+3. Conecte o celular no PC pelo cabo e aceite a permissão no celular
+4. No PowerShell (com as variáveis do passo A configuradas):
+
+```powershell
+adb devices
+# deve listar seu aparelho
+
+adb install -r platforms\android\app\build\outputs\apk\debug\app-debug.apk
+```
+
+### Opção 2: Transferir o APK diretamente
+
+1. Copie o arquivo `app-debug.apk` para o celular via USB, Google Drive ou WhatsApp
+2. No celular, abra o arquivo pelo gerenciador de arquivos
+3. Se solicitado, permita **instalar apps desconhecidos**
+4. Instalar
+
+---
+
+## Sincronização com Supabase (funcionalidade extra)
+
+O arquivo `www/js/sync.js` integra com o **Supabase** (PostgreSQL na nuvem).
+
+### Configuração
+
+1. Criar projeto gratuito em [supabase.com](https://supabase.com)
+2. No **SQL Editor**, criar a tabela:
+
+```sql
+create table registros (
+  id         bigserial primary key,
+  titulo     text,
+  dados      jsonb,
+  lat        float8,
+  lng        float8,
+  criado_em  timestamptz default now()
+);
+```
+
+3. Em **Settings → API**, copiar:
+   - **Project URL**
+   - **anon public key**
+
+4. Abrir `www/js/sync.js` e substituir:
+
+```js
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_KEY = 'SUA_CHAVE_ANON';
+```
+
+---
+
+## Persistência Local
+
+Todos os dados ficam no `localStorage` do dispositivo:
+
+| Chave | Conteúdo |
+|---|---|
+| `nx2_users` | Usuários cadastrados |
+| `nx2_session` | Sessão atual |
+| `nx2_appointments` | Agendamentos |
+| `nx2_services_{id}` | Serviços do prestador |
+| `nx2_chat_{aptId}` | Mensagens do chat |
+| `nx2_cache_*` | Cache das APIs (TTL 24h) |
 
 ---
 
@@ -127,23 +257,108 @@ cordova build android
 
 ### Entrega 1 ✅
 - [x] Projeto Cordova criado e configurado
-- [x] Framework7 configurado
 - [x] README criado
 - [x] Estrutura organizada em arquivos separados
-- [x] API 1 (IBGE/dados.gov.br) funcionando
-- [x] API 2 (ViaCEP) funcionando
+- [x] API IBGE/dados.gov.br funcionando
+- [x] API ViaCEP funcionando
 - [x] Plugins instalados
 
 ### Entrega 2 ✅
-- [x] APIs integradas na interface com loading visual (spinners animados)
+- [x] APIs integradas na interface com loading visual (spinners)
 - [x] Tratamento de erros com mensagens ao usuário
 - [x] GPS funcionando: mapa Leaflet + marcadores de prestadores
 - [x] Câmera funcionando: foto de perfil
 - [x] Cache/persistência via localStorage
 - [x] Navegação funcional entre todas as telas
 
-### Entrega 3 ✅
-- [x] Aplicativo funcional e estável
-- [x] Todas as funcionalidades integradas
-- [x] README.md final atualizado
-- [x] Build Android pronto (`cordova build android`)
+### Entrega 3 / Aula 7 ✅
+- [x] Notificações locais (`cordova-plugin-local-notification`)
+- [x] Sincronização com banco externo Supabase (`sync.js`)
+- [x] APK Android gerando com sucesso (`npm run android`)
+- [x] APK instalável no dispositivo físico
+
+---
+
+## ⚠️ Correções Necessárias Após `cordova prepare`
+
+> Toda vez que rodar `cordova prepare android` ou `cordova platform rm android && cordova platform add android`, os arquivos abaixo são regenerados e precisam ser corrigidos manualmente antes do build.
+
+### 1. `platforms/android/cordova-plugin-local-notification/app-localnotification.gradle`
+
+Trocar `compile` por `implementation` e adicionar dependências AndroidX:
+
+```gradle
+// DE:
+compile("me.leolin:ShortcutBadger:1.1.22@aar")
+
+// PARA:
+implementation("me.leolin:ShortcutBadger:1.1.22@aar")
+implementation("androidx.media:media:1.7.0")
+implementation("androidx.collection:collection:1.4.0")
+```
+
+### 2. `plugins/cordova-plugin-local-notification/src/android/build/localnotification.gradle`
+
+Mesma correção (essa é a fonte — editar aqui evita regerar):
+
+```gradle
+implementation("me.leolin:ShortcutBadger:1.1.22@aar")
+implementation("androidx.media:media:1.7.0")
+implementation("androidx.collection:collection:1.4.0")
+```
+
+### 3. Imports AndroidX nos arquivos `.java` do plugin
+
+Rodar no PowerShell dentro da pasta do projeto:
+
+```powershell
+$files = Get-ChildItem -Recurse -File `
+  plugins\cordova-plugin-local-notification\src\android, `
+  platforms\android\app\src\main\java\de\appplant `
+  -Include *.java
+
+foreach ($file in $files) {
+  $text = Get-Content -Raw -LiteralPath $file.FullName
+  $text = $text.Replace('android.support.v4.app.NotificationCompat',        'androidx.core.app.NotificationCompat')
+  $text = $text.Replace('android.support.v4.app.NotificationManagerCompat', 'androidx.core.app.NotificationManagerCompat')
+  $text = $text.Replace('android.support.v4.app.RemoteInput',               'androidx.core.app.RemoteInput')
+  $text = $text.Replace('android.support.v4.media.app.NotificationCompat.MediaStyle', 'androidx.media.app.NotificationCompat.MediaStyle')
+  $text = $text.Replace('android.support.v4.util.ArraySet',    'androidx.collection.ArraySet')
+  $text = $text.Replace('android.support.v4.util.Pair',        'androidx.core.util.Pair')
+  $text = $text.Replace('android.support.v4.content.FileProvider', 'androidx.core.content.FileProvider')
+  # MediaSessionCompat é exceção: mantém o pacote support mesmo no AndroidX
+  Set-Content -LiteralPath $file.FullName -Value $text -NoNewline
+}
+```
+
+> **Nota:** `android.support.v4.media.session.MediaSessionCompat` **não** deve ser trocado — esse import permanece com o pacote antigo mesmo no build moderno.
+
+### 4. `platforms/android/android.json` — remover permissões duplicadas
+
+Se aparecer erro de `WRITE_EXTERNAL_STORAGE duplicado` no build, abrir `platforms/android/android.json` e remover as entradas:
+
+```json
+"android.permission.READ_EXTERNAL_STORAGE"
+"android.permission.WRITE_EXTERNAL_STORAGE"
+```
+
+do bloco de `"munge"` que **não** vierem do `cordova-plugin-camera`. As do plugin de câmera já incluem `maxSdkVersion=32` e devem ser mantidas.
+
+---
+
+## Avisos Esperados no Build (não são erros)
+
+```
+Script file doesn't exist and will be skipped: hooks\before_prepare\copy_docs_to_www.js
+```
+Hook opcional que não existe — ignorar.
+
+```
+ANDROID_SDK_ROOT=... (DEPRECATED)
+```
+Variável antiga coexistindo com `ANDROID_HOME` — não afeta o build.
+
+```
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+```
+O build usa Gradle 8.14.2 internamente — esse aviso é sobre o futuro Gradle 9, não afeta nada agora.

@@ -29,12 +29,21 @@ module.exports = [
         "id": "cordova-plugin-camera.CameraProxy",
         "pluginId": "cordova-plugin-camera",
         "runs": true
+    },
+    {
+        "file": "plugins/cordova-plugin-local-notification/www/local-notification.js",
+        "id": "cordova-plugin-local-notification.LocalNotification",
+        "pluginId": "cordova-plugin-local-notification",
+        "clobbers": [
+            "cordova.plugins.notification.local"
+        ]
     }
 ];
 module.exports.metadata = 
 // TOP OF METADATA
 {
-    "cordova-plugin-camera": "7.0.0"
+    "cordova-plugin-camera": "7.0.0",
+    "cordova-plugin-local-notification": "0.9.0-beta.3"
 }
 // BOTTOM OF METADATA
 });
